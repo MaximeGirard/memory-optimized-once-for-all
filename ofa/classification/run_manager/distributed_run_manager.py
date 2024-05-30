@@ -218,7 +218,6 @@ class DistributedRunManager:
                 self.optimizer.load_state_dict(checkpoint["optimizer"])
 
             self.write_log("=> loaded checkpoint '{}'".format(model_fname), "valid")
-
     # noinspection PyArgumentList
     def broadcast(self):
         import horovod.torch as hvd

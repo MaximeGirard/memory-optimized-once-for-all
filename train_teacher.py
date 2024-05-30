@@ -9,7 +9,7 @@ import torch
 from ofa.classification.run_manager.distributed_run_manager import (
     DistributedRunManager,
 )
-from ofa.classification.elastic_nn.networks import OFAMobileNetV3Ct
+from ofa.classification.elastic_nn.networks import OFAMobileNetV3
 from ofa.classification.elastic_nn.training.progressive_shrinking import (
     load_models,
     validate,
@@ -17,15 +17,15 @@ from ofa.classification.elastic_nn.training.progressive_shrinking import (
 )
 
 args = {
-    "path": "teacher_model_imagenette",
+    "path": "teacher_model_MIT_imagenette",
     "teacher_path": None,
     "dynamic_batch_size": 1,
     "base_lr": 3e-2,
-    "n_epochs": 80,
-    "warmup_epochs": 0,
+    "n_epochs": 120,
+    "warmup_epochs": 5,
     "warmup_lr": -1,
     "ks_list": [3, 5, 7],
-    "expand_list": [0.9, 1, 1.1, 1.2],
+    "expand_list": [1, 2, 3, 4],
     "depth_list": [2, 3, 4],
     "manual_seed": 0,
     "lr_schedule_type": "cosine",
@@ -71,7 +71,7 @@ run_config = DistributedImageNetRunConfig(
     **args, num_replicas=num_gpus, rank=hvd.rank()
 )
 
-net = OFAMobileNetV3Ct(
+net = OFAMobileNetV3(
     n_classes=run_config.data_provider.n_classes,
     bn_param=(args["bn_momentum"], args["bn_eps"]),
     dropout_rate=args["dropout"],
@@ -102,6 +102,8 @@ run_manager = DistributedRunManager(
 )
 run_manager.save_config()
 run_manager.broadcast()
+
+run_manager.load_model()
 
 args["teacher_model"] = None
 

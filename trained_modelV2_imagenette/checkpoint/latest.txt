@@ -1,0 +1,1 @@
+trained_modelV2_imagenette/checkpoint/checkpoint.pth.tar

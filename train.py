@@ -1,4 +1,4 @@
-from ofa.classification.elastic_nn.networks import OFAMobileNetV3Ct
+from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV3
 from ofa.classification.run_manager.run_config import DistributedImageNetRunConfig, DistributedCIFAR10RunConfig
 import horovod.torch as hvd
 import torch
@@ -31,15 +31,15 @@ torch.cuda.set_device(hvd.local_rank())
 TEST = False
 
 args = {
-    "path": "trained_model_imagenette",
-    "teacher_path": "teacher_model_imagenette/checkpoint/checkpoint.pth.tar",
-    "ofa_checkpoint_path": "teacher_model_imagenette/checkpoint/checkpoint.pth.tar",
+    "path": "trained_modelV3_imagenette",
+    "teacher_path": "teacher_modelV3_imagenette/checkpoint/checkpoint.pth.tar",
+    "ofa_checkpoint_path": "teacher_modelV3_imagenette/checkpoint/checkpoint.pth.tar",
     "dynamic_batch_size": 1,
     "base_lr": 3e-2,
     "warmup_epochs": 0,
     "warmup_lr": -1,
     "ks_list": [3, 5, 7],
-    "expand_list": [0.9, 1, 1.1, 1.2],
+    "expand_list": [1, 2, 3, 4],
     "depth_list": [2, 3, 4],
     "manual_seed": 0,
     "lr_schedule_type": "cosine",
@@ -79,7 +79,7 @@ args_per_task = {
         "warmup_epochs": 0,
         "warmup_lr": -1,
         "ks_list": [3, 5, 7],
-        "expand_list": [1.2],
+        "expand_list": [4],
         "depth_list": [4],
     },
     "depth_1": {
@@ -88,7 +88,7 @@ args_per_task = {
         "warmup_epochs": 0,
         "warmup_lr": -1,
         "ks_list": [3, 5, 7],
-        "expand_list": [1.2],
+        "expand_list": [4],
         "depth_list": [3, 4],
     },
     "depth_2": {
@@ -97,7 +97,7 @@ args_per_task = {
         "warmup_epochs": 0,
         "warmup_lr": -1,
         "ks_list": [3, 5, 7],
-        "expand_list": [1.2],
+        "expand_list": [4],
         "depth_list": [2, 3, 4],
     },
     "expand_1": {
@@ -106,7 +106,7 @@ args_per_task = {
         "warmup_epochs": 0,
         "warmup_lr": -1,
         "ks_list": [3, 5, 7],
-        "expand_list": [1.2],
+        "expand_list": [4],
         "depth_list": [2, 3, 4],
     },
     "expand_2": {
@@ -115,7 +115,7 @@ args_per_task = {
         "warmup_epochs": 0,
         "warmup_lr": -1,
         "ks_list": [3, 5, 7],
-        "expand_list": [1.1, 1.2],
+        "expand_list": [3, 4],
         "depth_list": [2, 3, 4],
     },
     "expand_3": {
@@ -124,7 +124,7 @@ args_per_task = {
         "warmup_epochs": 0,
         "warmup_lr": -1,
         "ks_list": [3, 5, 7],
-        "expand_list": [1, 1.1, 1.2],
+        "expand_list": [2, 3, 4],
         "depth_list": [2, 3, 4],
     },
     "expand_4": {
@@ -133,7 +133,7 @@ args_per_task = {
         "warmup_epochs": 0,
         "warmup_lr": -1,
         "ks_list": [3, 5, 7],
-        "expand_list": [0.9, 1, 1.1, 1.2],
+        "expand_list": [1, 2, 3, 4],
         "depth_list": [2, 3, 4],
     },
 }
@@ -160,7 +160,7 @@ run_config = DistributedImageNetRunConfig(
     **args, num_replicas=num_gpus, rank=hvd.rank()
 )
 
-net = OFAMobileNetV3Ct(
+net = OFAMobileNetV3CtV3(
     n_classes=run_config.data_provider.n_classes,
     bn_param=(args["bn_momentum"], args["bn_eps"]),
     dropout_rate=args["dropout"],

@@ -36,6 +36,12 @@ class EvolutionFinder:
             efficiency = self.efficiency_predictor.get_efficiency(sample)
             if efficiency <= constraint:
                 return sample, efficiency
+            else:
+                sample["e"] = [random.choice([1, 2]) for _ in range(20)]
+                efficiency = self.efficiency_predictor.get_efficiency(sample)
+                #print(efficiency, sample)
+                if efficiency <= constraint:
+                    return sample, efficiency
 
     def mutate_sample(self, sample, constraint):
         while True:
@@ -79,6 +85,7 @@ class EvolutionFinder:
         if verbose:
             print("Generate random population...")
         for i in range(self.population_size):
+            print(f"Generating random population {i}/{self.population_size}")
             sample, efficiency = self.random_valid_sample(constraint)
             child_pool.append(sample)
             efficiency_pool.append(efficiency)

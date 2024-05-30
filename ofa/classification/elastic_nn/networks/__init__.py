@@ -6,3 +6,5 @@ from .ofa_proxyless import OFAProxylessNASNets
 from .ofa_mbv3 import OFAMobileNetV3
 from .ofa_resnets import OFAResNets
 from .ofa_mbv3_ct import OFAMobileNetV3Ct
+from .ofa_mbv3_ct_v2 import OFAMobileNetV3CtV2
+from .ofa_mbv3_ct_v3 import OFAMobileNetV3CtV3

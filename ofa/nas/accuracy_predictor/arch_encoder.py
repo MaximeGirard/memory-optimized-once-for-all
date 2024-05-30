@@ -26,7 +26,7 @@ class MobileNetArchEncoder:
         self.expand_list = (
             [3, 4, 6]
             if expand_list is None
-            else [int(expand) for expand in expand_list]
+            else [expand for expand in expand_list]
         )
         self.depth_list = [2, 3, 4] if depth_list is None else depth_list
         if n_stage is not None:
@@ -47,7 +47,7 @@ class MobileNetArchEncoder:
         self.e_info = dict(id2val=[], val2id=[], L=[], R=[])
         self._build_info_dict(target="k")
         self._build_info_dict(target="e")
-
+        
     @property
     def max_n_blocks(self):
         if self.SPACE_TYPE == "mbv3":
@@ -92,7 +92,6 @@ class MobileNetArchEncoder:
             arch_dict["d"],
             arch_dict["image_size"],
         )
-
         feature = np.zeros(self.n_dim)
         for i in range(self.max_n_blocks):
             nowd = i % max(self.depth_list)

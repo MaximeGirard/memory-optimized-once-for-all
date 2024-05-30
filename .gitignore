@@ -6,3 +6,5 @@ teacher_model_cifar10
 teacher_model_imagenette
 trained_model
 trained_model_imagenette
+imagenette_acc_predictor.pth
+**/*.pth.tar

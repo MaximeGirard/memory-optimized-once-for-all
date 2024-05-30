@@ -1,0 +1,390 @@
+{
+    "params": 7.694088,
+    "flops": 2.7328
+}
+3x3_Conv_O3_H_SWISH_BN
+(3x3_MBConv1_RELU_O8_BN, None)
+((O24, E4.0, K7), None)
+((O24, E4.0, K7), Identity)
+((O24, E4.0, K7), Identity)
+((O24, E4.0, K7), Identity)
+(SE(O88, E4.0, K7), None)
+(SE(O88, E4.0, K7), Identity)
+(SE(O88, E4.0, K7), Identity)
+(SE(O88, E4.0, K7), Identity)
+(SE(O184, E4.0, K7), None)
+(SE(O184, E4.0, K7), Identity)
+(SE(O184, E4.0, K7), Identity)
+(SE(O184, E4.0, K7), Identity)
+((O216, E4.0, K7), None)
+((O216, E4.0, K7), Identity)
+((O216, E4.0, K7), Identity)
+((O216, E4.0, K7), Identity)
+(SE(O224, E4.0, K7), None)
+(SE(O224, E4.0, K7), Identity)
+(SE(O224, E4.0, K7), Identity)
+(SE(O224, E4.0, K7), Identity)
+1x1_Conv_O224_H_SWISH_BN
+1x1_Conv_O224_H_SWISH
+224x1000_Linear
+
+Compose(
+    MyRandomResizedCrop(size=[128, 160, 192, 224], scale=(0.08, 1.0), ratio=(0.75, 1.3333), interpolation=PIL.Image.BILINEAR)
+    RandomHorizontalFlip(p=0.5)
+    ColorJitter(brightness=(0.8745098039215686, 1.1254901960784314), contrast=None, saturation=(0.5, 1.5), hue=None)
+    ToTensor()
+    Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+)
+Compose(
+    Resize(size=256, interpolation=bilinear, max_size=None, antialias=True)
+    CenterCrop(size=(224, 224))
+    ToTensor()
+    Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+)
+OFAMobileNetV3CtV2(
+  (first_conv): ConvLayer(
+    (conv): Conv2d(3, 3, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+    (bn): BatchNorm2d(3, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (act): Hswish()
+  )
+  (blocks): ModuleList(
+    (0): ResidualBlock(
+      (conv): MBConvLayer(
+        (depth_conv): Sequential(
+          (conv): Conv2d(3, 3, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=3, bias=False)
+          (bn): BatchNorm2d(3, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          (act): ReLU(inplace=True)
+        )
+        (point_linear): Sequential(
+          (conv): Conv2d(3, 8, kernel_size=(1, 1), stride=(1, 1), bias=False)
+          (bn): BatchNorm2d(8, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        )
+      )
+    )
+    (1): ResidualBlock(
+      (conv): DynamicMBConvLayer(
+        (inverted_bottleneck): Sequential(
+          (conv): DynamicConv2d(
+            (conv): Conv2d(8, 32, kernel_size=(1, 1), stride=(1, 1), bias=False)
+          )
+          (bn): DynamicBatchNorm2d(
+            (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+          (act): Hswish()
+        )
+        (depth_conv): Sequential(
+          (conv): DynamicSeparableConv2d(
+            (conv): Conv2d(32, 32, kernel_size=(7, 7), stride=(2, 2), groups=32, bias=False)
+          )
+          (bn): DynamicBatchNorm2d(
+            (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+          (act): Hswish()
+        )
+        (point_linear): Sequential(
+          (conv): DynamicConv2d(
+            (conv): Conv2d(32, 24, kernel_size=(1, 1), stride=(1, 1), bias=False)
+          )
+          (bn): DynamicBatchNorm2d(
+            (bn): BatchNorm2d(24, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+        )
+      )
+    )
+    (2-4): 3 x ResidualBlock(
+      (conv): DynamicMBConvLayer(
+        (inverted_bottleneck): Sequential(
+          (conv): DynamicConv2d(
+            (conv): Conv2d(24, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+          )
+          (bn): DynamicBatchNorm2d(
+            (bn): BatchNorm2d(96, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+          (act): Hswish()
+        )
+        (depth_conv): Sequential(
+          (conv): DynamicSeparableConv2d(
+            (conv): Conv2d(96, 96, kernel_size=(7, 7), stride=(1, 1), groups=96, bias=False)
+          )
+          (bn): DynamicBatchNorm2d(
+            (bn): BatchNorm2d(96, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+          (act): Hswish()
+        )
+        (point_linear): Sequential(
+          (conv): DynamicConv2d(
+            (conv): Conv2d(96, 24, kernel_size=(1, 1), stride=(1, 1), bias=False)
+          )
+          (bn): DynamicBatchNorm2d(
+            (bn): BatchNorm2d(24, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+        )
+      )
+      (shortcut): IdentityLayer()
+    )
+    (5): ResidualBlock(
+      (conv): DynamicMBConvLayer(
+        (inverted_bottleneck): Sequential(
+          (conv): DynamicConv2d(
+            (conv): Conv2d(24, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+          )
+          (bn): DynamicBatchNorm2d(
+            (bn): BatchNorm2d(96, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+          (act): Hswish()
+        )
+        (depth_conv): Sequential(
+          (conv): DynamicSeparableConv2d(
+            (conv): Conv2d(96, 96, kernel_size=(7, 7), stride=(2, 2), groups=96, bias=False)
+          )
+          (bn): DynamicBatchNorm2d(
+            (bn): BatchNorm2d(96, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+          (act): Hswish()
+          (se): SE(channel=96, reduction=4)
+        )
+        (point_linear): Sequential(
+          (conv): DynamicConv2d(
+            (conv): Conv2d(96, 88, kernel_size=(1, 1), stride=(1, 1), bias=False)
+          )
+          (bn): DynamicBatchNorm2d(
+            (bn): BatchNorm2d(88, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+        )
+      )
+    )
+    (6-8): 3 x ResidualBlock(
+      (conv): DynamicMBConvLayer(
+        (inverted_bottleneck): Sequential(
+          (conv): DynamicConv2d(
+            (conv): Conv2d(88, 352, kernel_size=(1, 1), stride=(1, 1), bias=False)
+          )
+          (bn): DynamicBatchNorm2d(
+            (bn): BatchNorm2d(352, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+          (act): Hswish()
+        )
+        (depth_conv): Sequential(
+          (conv): DynamicSeparableConv2d(
+            (conv): Conv2d(352, 352, kernel_size=(7, 7), stride=(1, 1), groups=352, bias=False)
+          )
+          (bn): DynamicBatchNorm2d(
+            (bn): BatchNorm2d(352, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+          (act): Hswish()
+          (se): SE(channel=352, reduction=4)
+        )
+        (point_linear): Sequential(
+          (conv): DynamicConv2d(
+            (conv): Conv2d(352, 88, kernel_size=(1, 1), stride=(1, 1), bias=False)
+          )
+          (bn): DynamicBatchNorm2d(
+            (bn): BatchNorm2d(88, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+        )
+      )
+      (shortcut): IdentityLayer()
+    )
+    (9): ResidualBlock(
+      (conv): DynamicMBConvLayer(
+        (inverted_bottleneck): Sequential(
+          (conv): DynamicConv2d(
+            (conv): Conv2d(88, 352, kernel_size=(1, 1), stride=(1, 1), bias=False)
+          )
+          (bn): DynamicBatchNorm2d(
+            (bn): BatchNorm2d(352, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+          (act): Hswish()
+        )
+        (depth_conv): Sequential(
+          (conv): DynamicSeparableConv2d(
+            (conv): Conv2d(352, 352, kernel_size=(7, 7), stride=(2, 2), groups=352, bias=False)
+          )
+          (bn): DynamicBatchNorm2d(
+            (bn): BatchNorm2d(352, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+          (act): Hswish()
+          (se): SE(channel=352, reduction=4)
+        )
+        (point_linear): Sequential(
+          (conv): DynamicConv2d(
+            (conv): Conv2d(352, 184, kernel_size=(1, 1), stride=(1, 1), bias=False)
+          )
+          (bn): DynamicBatchNorm2d(
+            (bn): BatchNorm2d(184, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+        )
+      )
+    )
+    (10-12): 3 x ResidualBlock(
+      (conv): DynamicMBConvLayer(
+        (inverted_bottleneck): Sequential(
+          (conv): DynamicConv2d(
+            (conv): Conv2d(184, 736, kernel_size=(1, 1), stride=(1, 1), bias=False)
+          )
+          (bn): DynamicBatchNorm2d(
+            (bn): BatchNorm2d(736, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+          (act): Hswish()
+        )
+        (depth_conv): Sequential(
+          (conv): DynamicSeparableConv2d(
+            (conv): Conv2d(736, 736, kernel_size=(7, 7), stride=(1, 1), groups=736, bias=False)
+          )
+          (bn): DynamicBatchNorm2d(
+            (bn): BatchNorm2d(736, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+          (act): Hswish()
+          (se): SE(channel=736, reduction=4)
+        )
+        (point_linear): Sequential(
+          (conv): DynamicConv2d(
+            (conv): Conv2d(736, 184, kernel_size=(1, 1), stride=(1, 1), bias=False)
+          )
+          (bn): DynamicBatchNorm2d(
+            (bn): BatchNorm2d(184, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+        )
+      )
+      (shortcut): IdentityLayer()
+    )
+    (13): ResidualBlock(
+      (conv): DynamicMBConvLayer(
+        (inverted_bottleneck): Sequential(
+          (conv): DynamicConv2d(
+            (conv): Conv2d(184, 736, kernel_size=(1, 1), stride=(1, 1), bias=False)
+          )
+          (bn): DynamicBatchNorm2d(
+            (bn): BatchNorm2d(736, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+          (act): ReLU(inplace=True)
+        )
+        (depth_conv): Sequential(
+          (conv): DynamicSeparableConv2d(
+            (conv): Conv2d(736, 736, kernel_size=(7, 7), stride=(2, 2), groups=736, bias=False)
+          )
+          (bn): DynamicBatchNorm2d(
+            (bn): BatchNorm2d(736, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+          (act): ReLU(inplace=True)
+        )
+        (point_linear): Sequential(
+          (conv): DynamicConv2d(
+            (conv): Conv2d(736, 216, kernel_size=(1, 1), stride=(1, 1), bias=False)
+          )
+          (bn): DynamicBatchNorm2d(
+            (bn): BatchNorm2d(216, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+        )
+      )
+    )
+    (14-16): 3 x ResidualBlock(
+      (conv): DynamicMBConvLayer(
+        (inverted_bottleneck): Sequential(
+          (conv): DynamicConv2d(
+            (conv): Conv2d(216, 864, kernel_size=(1, 1), stride=(1, 1), bias=False)
+          )
+          (bn): DynamicBatchNorm2d(
+            (bn): BatchNorm2d(864, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+          (act): ReLU(inplace=True)
+        )
+        (depth_conv): Sequential(
+          (conv): DynamicSeparableConv2d(
+            (conv): Conv2d(864, 864, kernel_size=(7, 7), stride=(1, 1), groups=864, bias=False)
+          )
+          (bn): DynamicBatchNorm2d(
+            (bn): BatchNorm2d(864, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+          (act): ReLU(inplace=True)
+        )
+        (point_linear): Sequential(
+          (conv): DynamicConv2d(
+            (conv): Conv2d(864, 216, kernel_size=(1, 1), stride=(1, 1), bias=False)
+          )
+          (bn): DynamicBatchNorm2d(
+            (bn): BatchNorm2d(216, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+        )
+      )
+      (shortcut): IdentityLayer()
+    )
+    (17): ResidualBlock(
+      (conv): DynamicMBConvLayer(
+        (inverted_bottleneck): Sequential(
+          (conv): DynamicConv2d(
+            (conv): Conv2d(216, 864, kernel_size=(1, 1), stride=(1, 1), bias=False)
+          )
+          (bn): DynamicBatchNorm2d(
+            (bn): BatchNorm2d(864, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+          (act): Hswish()
+        )
+        (depth_conv): Sequential(
+          (conv): DynamicSeparableConv2d(
+            (conv): Conv2d(864, 864, kernel_size=(7, 7), stride=(2, 2), groups=864, bias=False)
+          )
+          (bn): DynamicBatchNorm2d(
+            (bn): BatchNorm2d(864, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+          (act): Hswish()
+          (se): SE(channel=864, reduction=4)
+        )
+        (point_linear): Sequential(
+          (conv): DynamicConv2d(
+            (conv): Conv2d(864, 224, kernel_size=(1, 1), stride=(1, 1), bias=False)
+          )
+          (bn): DynamicBatchNorm2d(
+            (bn): BatchNorm2d(224, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+        )
+      )
+    )
+    (18-20): 3 x ResidualBlock(
+      (conv): DynamicMBConvLayer(
+        (inverted_bottleneck): Sequential(
+          (conv): DynamicConv2d(
+            (conv): Conv2d(224, 896, kernel_size=(1, 1), stride=(1, 1), bias=False)
+          )
+          (bn): DynamicBatchNorm2d(
+            (bn): BatchNorm2d(896, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+          (act): Hswish()
+        )
+        (depth_conv): Sequential(
+          (conv): DynamicSeparableConv2d(
+            (conv): Conv2d(896, 896, kernel_size=(7, 7), stride=(1, 1), groups=896, bias=False)
+          )
+          (bn): DynamicBatchNorm2d(
+            (bn): BatchNorm2d(896, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+          (act): Hswish()
+          (se): SE(channel=896, reduction=4)
+        )
+        (point_linear): Sequential(
+          (conv): DynamicConv2d(
+            (conv): Conv2d(896, 224, kernel_size=(1, 1), stride=(1, 1), bias=False)
+          )
+          (bn): DynamicBatchNorm2d(
+            (bn): BatchNorm2d(224, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+        )
+      )
+      (shortcut): IdentityLayer()
+    )
+  )
+  (final_expand_layer): ConvLayer(
+    (conv): Conv2d(224, 224, kernel_size=(1, 1), stride=(1, 1), bias=False)
+    (bn): BatchNorm2d(224, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (act): Hswish()
+  )
+  (global_avg_pool): MyGlobalAvgPool2d(keep_dim=True)
+  (feature_mix_layer): ConvLayer(
+    (conv): Conv2d(224, 224, kernel_size=(1, 1), stride=(1, 1), bias=False)
+    (act): Hswish()
+  )
+  (classifier): LinearLayer(
+    (dropout): Dropout(p=0.1, inplace=True)
+    (linear): Linear(in_features=224, out_features=1000, bias=True)
+  )
+)

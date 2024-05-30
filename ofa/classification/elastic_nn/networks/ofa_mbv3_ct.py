@@ -262,6 +262,13 @@ class OFAMobileNetV3Ct(MobileNetV3):
 
     """ set, sample and get active sub-networks """
 
+    def get_current_config(self):
+        return {
+            "ks": [block.conv.active_kernel_size for block in self.blocks[1:]],
+            "e": [block.conv.active_expand_ratio for block in self.blocks[1:]],
+            "d": self.runtime_depth,
+        }
+
     def set_max_net(self):
         return self.set_active_subnet(
             ks=max(self.ks_list), e=max(self.expand_ratio_list), d=max(self.depth_list)
@@ -283,7 +290,7 @@ class OFAMobileNetV3Ct(MobileNetV3):
             if d is not None:
                 # protected by the min function to avoid stage larger than 4
                 self.runtime_depth[i] = min(len(self.block_group_info[i]), d)
-
+        
         return {
             "ks": ks,
             "e": expand_ratio,
