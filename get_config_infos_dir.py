@@ -25,7 +25,7 @@ from ofa.utils import AverageMeter
 args = {
     "path": "trained_modelV3_imagenette",
     "dataset_path": "imagenette2/",
-    "res_dir": "config_infos/",
+    "res_dir": "graphs_ofa/V3/",
     "device": "cuda",
     "teacher_path": None,
     "dynamic_batch_size": 1,
@@ -34,7 +34,7 @@ args = {
     "warmup_epochs": 0,
     "warmup_lr": -1,
     "ks_list": [3, 5, 7],
-    # "expand_list": [3, 4, 6],
+    #"expand_list": [3, 4, 6],
     "expand_list": [1, 2, 3, 4],
     "depth_list": [2, 3, 4],
     "image_size": [128, 160, 192, 224],
@@ -109,102 +109,72 @@ run_manager = DistributedRunManager(
 
 run_manager.load_model()
 
-# config = {
-#     "ks": [7, 5, 3, 7, 5, 5, 3, 3, 5, 5, 7, 5, 3, 5, 7, 3, 5, 5, 7, 3],
-#     "e": [3, 2, 2, 2, 4, 2, 1, 1, 4, 2, 3, 1, 3, 2, 3, 2, 2, 3, 1, 4],
-#     "d": [3, 4, 3, 4, 2],
-#     "image_size": 224,
-# }
-# name = "500k_constraint_V3"
+config = {}
+dirs = os.listdir("graphs_ofa_pred/V3/")
+for dir in dirs:
+    info_path = os.path.join("graphs_ofa_pred/V3/", dir, "info.json")
+    with open(info_path, "r") as f:
+        info = json.load(f)
+        config = info["config"]
+        
+        print(config)
+        
+        name = dir
 
-# config = {
-#     "ks": [7] * 20,
-#     "e": [6] * 20,
-#     "d": [4, 4, 4, 4, 4],
-#     "image_size": 224,
-# }
+        net.set_active_subnet(ks=config["ks"], e=config["e"], d=config["d"])
 
-# name = "max_config_MIT"
+        # Evaluate the model
+        run_config.data_provider.assign_active_img_size(config["image_size"])
+        run_manager.reset_running_statistics(net)
+        print(net.get_current_config())
 
-# config = {
-#     "ks": [3] * 20,
-#     "e": [3] * 20,
-#     "d": [2, 2, 2, 2, 2],
-#     "image_size": 128,
-# }
+        subnet = net.get_active_subnet()
 
-# config = {
-#     "ks": [5, 5, 7, 5, 5, 3, 5, 3, 3, 3, 5, 7, 5, 5, 3, 5, 3, 5, 5, 7],
-#     "e": [2, 2, 2, 1, 4, 2, 2, 2, 3, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1],
-#     "d": [4, 4, 2, 4, 2],
-#     "image_size": 160,
-# }
+        accuracies = AverageMeter()
+        model = run_manager.net
+        data_loader = run_manager.run_config.test_loader
+        device = "cuda" if torch.cuda.is_available() else "cpu"
 
-# name = "under_200k_V3"
+        subnet.eval()
+        with torch.no_grad():
+            pbar = tqdm(total=len(data_loader), desc="Validate", position=0, leave=True)
+            for images, labels in data_loader:
+                images, labels = images.to(device), labels.to(device)
+                output = model(images)
+                accuracy = (output.argmax(1) == labels).float().mean()
+                accuracies.update(accuracy.item(), images.size(0))
+                # Update tqdm description with accuracy info
+                pbar.set_postfix({"acc": accuracies.avg, "img_size": images.size(2)})
+                pbar.update(1)
+        acc = accuracies.avg
 
-config = {
-    "ks": [5, 3, 5, 3, 5, 5, 3, 5, 7, 7, 5, 3, 3, 5, 7, 5, 7, 3, 5, 3],
-    "e": [4, 2, 3, 3, 4, 2, 1, 3, 4, 2, 2, 3, 2, 2, 2, 2, 1, 2, 4, 2],
-    "d": [3, 3, 3, 4, 2],
-    "image_size": 192,
-}
+        draw_arch(
+            ofa_net=net,
+            resolution=config["image_size"],
+            out_name=os.path.join(args["res_dir"], name, "subnet"),
+        )
 
-name = "test"
+        peak_act, history = efficiency_predictor.count_peak_activation_size(
+            subnet, (1, 3, config["image_size"], config["image_size"]), get_hist=True
+        )
 
-net.set_active_subnet(ks=config["ks"], e=config["e"], d=config["d"])
+        # Draw histogram
+        plt.clf()
+        plt.bar(range(len(history)), history)
+        plt.xlabel("Time")
+        plt.ylabel("Memory Occupation")
+        plt.title("Memory Occupation over time")
+        plt.savefig(os.path.join(args["res_dir"], name, "memory_histogram.png"))
+        plt.show()
 
-subnet = net.get_active_subnet()
+        # log informations in a json
+        data = {
+            "accuracy": acc,
+            "peak_memory": peak_act,
+            "config": config,
+            "memory_history": history,
+        }
 
-# Evaluate the model
-run_config.data_provider.assign_active_img_size(config["image_size"])
-run_manager.reset_running_statistics(net)
-print(net.get_current_config())
-
-accuracies = AverageMeter()
-model = run_manager.net
-data_loader = run_manager.run_config.test_loader
-device = "cuda" if torch.cuda.is_available() else "cpu"
-
-subnet.eval()
-with torch.no_grad():
-    pbar = tqdm(total=len(data_loader), desc="Validate", position=0, leave=True)
-    for images, labels in data_loader:
-        images, labels = images.to(device), labels.to(device)
-        output = model(images)
-        accuracy = (output.argmax(1) == labels).float().mean()
-        accuracies.update(accuracy.item(), images.size(0))
-        # Update tqdm description with accuracy info
-        pbar.set_postfix({"acc": accuracies.avg, "img_size": images.size(2)})
-        pbar.update(1)
-acc = accuracies.avg
-
-draw_arch(
-    ofa_net=net,
-    resolution=config["image_size"],
-    out_name=os.path.join(args["res_dir"], name, "subnet"),
-)
-
-peak_act, history = efficiency_predictor.count_peak_activation_size(
-    subnet, (1, 3, config["image_size"], config["image_size"]), get_hist=True
-)
-
-# Draw histogram
-plt.clf()
-plt.bar(range(len(history)), history)
-plt.xlabel("Time")
-plt.ylabel("Memory Occupation")
-plt.title("Memory Occupation over time")
-plt.savefig(os.path.join(args["res_dir"], name, "memory_histogram.png"))
-plt.show()
-
-# log informations in a json
-data = {
-    "accuracy": acc,
-    "peak_memory": peak_act,
-    "config": config,
-    "memory_history": history,
-}
-
-info_path = os.path.join(args["res_dir"], name, "info.json")
-with open(info_path, "w") as f:
-    json.dump(data, f)
+        info_path = os.path.join(args["res_dir"], name, "info.json")
+        with open(info_path, "w") as f:
+            json.dump(data, f)

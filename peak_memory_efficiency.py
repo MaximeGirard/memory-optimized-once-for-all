@@ -107,7 +107,7 @@ class PeakMemoryEfficiency(BaseEfficiencyModel):
         mem_list = [
             count_conv_mem(net.first_conv),
             count_conv_mem(net.final_expand_layer),
-            count_conv_mem(net.feature_mix_layer),
+            #count_conv_mem(net.feature_mix_layer),
             # See below explanation for why we don't keep it
             #count_conv_mem(net.classifier),
         ] + [count_block(blk) for blk in net.blocks]
@@ -118,7 +118,7 @@ class PeakMemoryEfficiency(BaseEfficiencyModel):
                 count for count in count_block(blk, get_list=True) if count != 0
             ]
         activation_hist.append(count_conv_mem(net.final_expand_layer))
-        activation_hist.append(count_conv_mem(net.feature_mix_layer))
+        #activation_hist.append(count_conv_mem(net.feature_mix_layer))
         # I decide to NOT count the final classifier because it is replaced in a
         # real network. Here, it has an output size of 1000, which is too important
         # and would bias the results.

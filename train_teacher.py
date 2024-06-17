@@ -25,7 +25,7 @@ args = {
     "warmup_epochs": 5,
     "warmup_lr": -1,
     "ks_list": [3, 5, 7],
-    "expand_list": [1, 2, 3, 4],
+    "expand_list": [3, 4, 6],
     "depth_list": [2, 3, 4],
     "manual_seed": 0,
     "lr_schedule_type": "cosine",

@@ -36,12 +36,12 @@ class EvolutionFinder:
             efficiency = self.efficiency_predictor.get_efficiency(sample)
             if efficiency <= constraint:
                 return sample, efficiency
-            else:
-                sample["e"] = [random.choice([1, 2]) for _ in range(20)]
-                efficiency = self.efficiency_predictor.get_efficiency(sample)
-                #print(efficiency, sample)
-                if efficiency <= constraint:
-                    return sample, efficiency
+            # else:
+            #     sample["e"] = [random.choice([1, 2]) for _ in range(20)]
+            #     efficiency = self.efficiency_predictor.get_efficiency(sample)
+            #     #print(efficiency, sample)
+            #     if efficiency <= constraint:
+            #         return sample, efficiency
 
     def mutate_sample(self, sample, constraint):
         while True:

@@ -12,7 +12,7 @@ import random
 
 # Arguments (should match the arguments used during training)
 args = {
-    "path": "trained_modelV3_imagenette",
+    "path": "trained_model_V3_imagenette",
     "teacher_path": None,
     "dynamic_batch_size": 1,
     "base_lr": 3e-2,
@@ -20,7 +20,7 @@ args = {
     "warmup_epochs": 0,
     "warmup_lr": -1,
     "ks_list": [3, 5, 7],
-    "expand_list": [1, 2, 3, 4],
+    "expand_list": [3, 4, 6],
     "depth_list": [2, 3, 4],
     "manual_seed": 0,
     "lr_schedule_type": "cosine",
@@ -67,7 +67,7 @@ run_config = DistributedImageNetRunConfig(
 )
 
 # Initialize the network
-net = OFAMobileNetV3CtV3(
+net = OFAMobileNetV3(
     n_classes=run_config.data_provider.n_classes,
     bn_param=(args["bn_momentum"], args["bn_eps"]),
     dropout_rate=args["dropout"],
@@ -99,7 +99,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 config = {
     "ks": [7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7],
-    "e": [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
+    "e": [6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6],
     "d": [4, 4, 4, 4],
     "image_size": 224,
 }

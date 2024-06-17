@@ -20,12 +20,15 @@ y_train = accuracies[: int(0.8 * len(accuracies))]
 X_test = features[int(0.8 * len(features)) :]
 y_test = accuracies[int(0.8 * len(accuracies)) :]
 
-n_epochs = 100
+n_epochs = 150
 
 model = Predictor(input_size=144, device="cuda")
+
+model.set_base_acc(y_train)
+
 train_losses, test_losses = model.train(X_train, y_train, X_test, y_test, n_epochs=n_epochs)
 
-model.save_model("imagenette_acc_predictor.pth")
+model.save_model("imagenette_acc_predictor_V3.pth")
 
 # Create a plot of training and test losses
 plt.figure(figsize=(15, 5))
@@ -69,4 +72,4 @@ plt.text(0.2, 0.8, f"MSE: {mse:.2e}", transform=plt.gca().transAxes)
 plt.tight_layout()
 
 # Save the plot
-plt.savefig("losses_and_accuracies.png")
+plt.savefig("losses_and_accuracies_V3.png")

@@ -3,22 +3,22 @@ from ofa.classification.networks import MobileNetV3Large
 import horovod.torch as hvd
 from ofa.classification.run_manager.run_config import DistributedCIFAR10RunConfig, DistributedImageNetRunConfig
 from ofa.classification.run_manager.distributed_run_manager import DistributedRunManager
-from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV3
+from ofa.classification.elastic_nn.networks import OFAMobileNetV3
 from ofa.classification.elastic_nn.training.progressive_shrinking import (
     load_models,
 )
 
 # Arguments (should match the arguments used during training)
 args = {
-    "path": "teacher_modelV3_imagenette",
-    "teacher_path": "teacher_modelV3_imagenette/checkpoint/checkpoint.pth.tar",
+    "path": "teacher_model_MIT_imagenette",
+    "teacher_path": "teacher_model_MIT_imagenette/checkpoint/checkpoint.pth.tar",
     "dynamic_batch_size": 1,
     "base_lr": 3e-2,
     "n_epochs": 1,
     "warmup_epochs": 0,
     "warmup_lr": -1,
     "ks_list": [3, 5, 7],
-    "expand_list": [1, 2, 3, 4],
+    "expand_list": [3, 4, 6],
     "depth_list": [2, 3, 4],
     "manual_seed": 0,
     "lr_schedule_type": "cosine",
@@ -65,7 +65,7 @@ run_config = DistributedImageNetRunConfig(
 )
 
 # Initialize the network
-net = OFAMobileNetV3CtV3(
+net = OFAMobileNetV3(
     n_classes=run_config.data_provider.n_classes,
     bn_param=(args["bn_momentum"], args["bn_eps"]),
     dropout_rate=args["dropout"],

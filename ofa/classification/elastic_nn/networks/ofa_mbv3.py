@@ -42,6 +42,8 @@ class OFAMobileNetV3(MobileNetV3):
         self.ks_list.sort()
         self.expand_ratio_list.sort()
         self.depth_list.sort()
+        
+        self.stride_stages = [1, 2, 2, 2, 1, 2]
 
         # Channel number between each stage
         base_stage_width = [16, 16, 24, 40, 80, 112, 160, 960, 1280]
@@ -248,6 +250,13 @@ class OFAMobileNetV3(MobileNetV3):
             assert new_key in model_dict, "%s" % new_key
             model_dict[new_key] = state_dict[key]
         super(OFAMobileNetV3, self).load_state_dict(model_dict)
+
+    def get_current_config(self):
+        return {
+            "ks": [block.conv.active_kernel_size for block in self.blocks[1:]],
+            "e": [block.conv.active_expand_ratio for block in self.blocks[1:]],
+            "d": self.runtime_depth,
+        }
 
     """ set, sample and get active sub-networks """
 

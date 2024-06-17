@@ -8,3 +8,7 @@ trained_model
 trained_model_imagenette
 imagenette_acc_predictor.pth
 **/*.pth.tar
+graphs_ofa/
+graphs_ofa_pred/
+subnets_data/
+config_infos/
