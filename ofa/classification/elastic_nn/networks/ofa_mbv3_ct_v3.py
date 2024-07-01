@@ -59,24 +59,20 @@ class OFAMobileNetV3CtV3(MobileNetV3):
         in_size = 56 # reference image size : 224
         e = 3 # reference expansion factor
         c = 24
-        for i in range(3, self.n_stages + 4):
-            # c1 : channel size of subsequent stage to keep same "inverted bottleneck" memory usage
-            c1 = ((2 * c * in_size**2) + c * 49) / (in_size**2 / 2 + 49)
-            c1 = make_divisible(c1, MyNetwork.CHANNEL_DIVISIBLE)
-            #print("c1", c1)
-            # c2 : channel size of subsequent stage to keep same "depthwise conv" memory usage / or to keep same "inverted bottleneck" memory usage (whether the biggest in prev stage)
-            prev_peak = max(
-                c * in_size**2 + e * c**2 + e * c * in_size**2,
-                e * c * in_size**2 + e * c * 49 + e * c * in_size**2,
-            )
-            delta = ((1 + e) * in_size**2 / 4) ** 2 + 4 * e * prev_peak
-            c2 = (-(1 + e) * in_size**2 / 4 + (delta) ** 0.5) / (2 * e)
-            c2 = make_divisible(c2, MyNetwork.CHANNEL_DIVISIBLE)
-            #print("c2", c2)
+        
+        prev_depthwise_mem = e * c * in_size**2 + e * c * 49 + e * c * (in_size**2)/4
+        prev_expansion_mem = e * c * in_size**2 + e * c * 49 + c * in_size**2
+        
+        if prev_depthwise_mem > prev_expansion_mem:
+            c1 = (c*((in_size**2)/5 + 49)) / ((in_size**2)/2 + 49)
+            c2 = (-(in_size**2)/4 + e*(in_size**2)/4 + (((in_size**2)/4 + e*(in_size**2)/4)**2 + 4*prev_depthwise_mem)**0.5) / (2*e)
             c = min(c1, c2)
-            #print("c", c)
-            in_size = in_size / 2
-            base_stage_width.append(c)
+        else:
+            c = (-(in_size**2)/4 + e*(in_size**2)/4 + (((in_size**2)/4 + e*(in_size**2)/4)**2 + 4*prev_expansion_mem)**0.5) / (2*e)
+
+        in_size = in_size / 2
+        c = make_divisible(c, MyNetwork.CHANNEL_DIVISIBLE)
+        base_stage_width.append(c)
 
         # result
         #base_stage_width = [3, 8, 24, 96, 288, 368, 392, 400, 400]
