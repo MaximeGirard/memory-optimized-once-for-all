@@ -13,7 +13,7 @@ from ofa.classification.run_manager import (
 from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV3
 from predictor_imagenette import Predictor
 from ofa.utils.net_viz import draw_arch
-from peak_memory_efficiency import PeakMemoryEfficiency
+from ofa.utils.peak_memory_efficiency import PeakMemoryEfficiency
 import random
 import matplotlib.pyplot as plt
 import json

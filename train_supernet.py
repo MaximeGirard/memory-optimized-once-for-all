@@ -3,7 +3,7 @@ from ofa.classification.run_manager.run_config import DistributedImageNetRunConf
 import horovod.torch as hvd
 import torch
 import torch.nn as nn
-from peak_memory_efficiency import PeakMemoryEfficiency
+from ofa.utils.peak_memory_efficiency import PeakMemoryEfficiency
 import matplotlib.pyplot as plt
 from ofa.utils.net_viz import draw_arch
 from ofa.utils import MyRandomResizedCrop

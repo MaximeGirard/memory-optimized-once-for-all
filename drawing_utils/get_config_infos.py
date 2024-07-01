@@ -10,10 +10,10 @@ from ofa.classification.run_manager import (
     DistributedImageNetRunConfig,
     DistributedRunManager,
 )
-from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV2
+from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV3
 from predictor_imagenette import Predictor
 from ofa.utils.net_viz import draw_arch
-from peak_memory_efficiency import PeakMemoryEfficiency
+from ofa.utils.peak_memory_efficiency import PeakMemoryEfficiency
 import random
 import matplotlib.pyplot as plt
 import json
@@ -23,7 +23,7 @@ from tqdm import tqdm
 from ofa.utils import AverageMeter
 
 args = {
-    "path": "trained_model_imagenette",
+    "path": "trained_modelV3_imagenette",
     "dataset_path": "imagenette2/",
     "res_dir": "config_infos/",
     "device": "cuda",
@@ -34,6 +34,7 @@ args = {
     "warmup_epochs": 0,
     "warmup_lr": -1,
     "ks_list": [3, 5, 7],
+    # "expand_list": [3, 4, 6],
     "expand_list": [1, 2, 3, 4],
     "depth_list": [2, 3, 4],
     "image_size": [128, 160, 192, 224],
@@ -69,19 +70,21 @@ args = {
 
 # Set default path for Imagenet data
 ImagenetDataProvider.DEFAULT_PATH = args["dataset_path"]
+
 # Initialize Horovod
 hvd.init()
 torch.cuda.set_device(hvd.local_rank())
 
 # Build run config
 num_gpus = hvd.size()
-
+args["init_lr"] = args["base_lr"] * num_gpus
+args["train_batch_size"] = args["base_batch_size"]
+args["test_batch_size"] = args["base_batch_size"] * 4
 run_config = DistributedImageNetRunConfig(
     **args, num_replicas=num_gpus, rank=hvd.rank()
 )
-
 # Initialize the network
-net = OFAMobileNetV3CtV2(
+net = OFAMobileNetV3CtV3(
     n_classes=run_config.data_provider.n_classes,
     bn_param=(args["bn_momentum"], args["bn_eps"]),
     dropout_rate=args["dropout"],
@@ -94,21 +97,86 @@ net = OFAMobileNetV3CtV2(
 
 efficiency_predictor = PeakMemoryEfficiency(net)
 
+compression = hvd.Compression.fp16 if args["fp16_allreduce"] else hvd.Compression.none
+run_manager = DistributedRunManager(
+    args["path"],
+    net,
+    run_config,
+    compression,
+    backward_steps=args["dynamic_batch_size"],
+    is_root=(hvd.rank() == 0),
+)
+
+run_manager.load_model()
+
+# config = {
+#     "ks": [7, 5, 3, 7, 5, 5, 3, 3, 5, 5, 7, 5, 3, 5, 7, 3, 5, 5, 7, 3],
+#     "e": [3, 2, 2, 2, 4, 2, 1, 1, 4, 2, 3, 1, 3, 2, 3, 2, 2, 3, 1, 4],
+#     "d": [3, 4, 3, 4, 2],
+#     "image_size": 224,
+# }
+# name = "500k_constraint_V3"
+
+# config = {
+#     "ks": [7] * 20,
+#     "e": [6] * 20,
+#     "d": [4, 4, 4, 4, 4],
+#     "image_size": 224,
+# }
+
+# name = "max_config_MIT"
+
+# config = {
+#     "ks": [3] * 20,
+#     "e": [3] * 20,
+#     "d": [2, 2, 2, 2, 2],
+#     "image_size": 128,
+# }
+
+# config = {
+#     "ks": [5, 5, 7, 5, 5, 3, 5, 3, 3, 3, 5, 7, 5, 5, 3, 5, 3, 5, 5, 7],
+#     "e": [2, 2, 2, 1, 4, 2, 2, 2, 3, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1],
+#     "d": [4, 4, 2, 4, 2],
+#     "image_size": 160,
+# }
+
+# name = "under_200k_V3"
+
 config = {
-    "ks": [7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7],
-    "e":  [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
-    "d": [4, 4, 4, 4, 4],
-    "image_size": 128,
+    "ks": [5, 3, 5, 3, 5, 5, 3, 5, 7, 7, 5, 3, 3, 5, 7, 5, 7, 3, 5, 3],
+    "e": [4, 2, 3, 3, 4, 2, 1, 3, 4, 2, 2, 3, 2, 2, 2, 2, 1, 2, 4, 2],
+    "d": [3, 3, 3, 4, 2],
+    "image_size": 192,
 }
-name = "max_model_v2"
+
+name = "test"
 
 net.set_active_subnet(ks=config["ks"], e=config["e"], d=config["d"])
 
-print(net.get_current_config())
-
 subnet = net.get_active_subnet()
 
-acc = "not available"
+# Evaluate the model
+run_config.data_provider.assign_active_img_size(config["image_size"])
+run_manager.reset_running_statistics(net)
+print(net.get_current_config())
+
+accuracies = AverageMeter()
+model = run_manager.net
+data_loader = run_manager.run_config.test_loader
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+subnet.eval()
+with torch.no_grad():
+    pbar = tqdm(total=len(data_loader), desc="Validate", position=0, leave=True)
+    for images, labels in data_loader:
+        images, labels = images.to(device), labels.to(device)
+        output = model(images)
+        accuracy = (output.argmax(1) == labels).float().mean()
+        accuracies.update(accuracy.item(), images.size(0))
+        # Update tqdm description with accuracy info
+        pbar.set_postfix({"acc": accuracies.avg, "img_size": images.size(2)})
+        pbar.update(1)
+acc = accuracies.avg
 
 draw_arch(
     ofa_net=net,
