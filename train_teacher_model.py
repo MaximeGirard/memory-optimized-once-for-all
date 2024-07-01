@@ -1,32 +1,25 @@
 import yaml
-from ast import arg
-from ofa.classification.networks import MobileNetV3Large
 import horovod.torch as hvd
 from ofa.classification.run_manager.run_config import (
-    DistributedCIFAR10RunConfig,
     DistributedImageNetRunConfig,
 )
 import torch
 from ofa.classification.run_manager.distributed_run_manager import (
     DistributedRunManager,
 )
-from ofa.classification.elastic_nn.networks import OFAMobileNetV3
-from ofa.classification.elastic_nn.training.progressive_shrinking import (
-    load_models,
-    validate,
-    train,
-)
+
 
 # Function to load YAML configuration
 def load_config(config_path):
-    with open(config_path, 'r') as file:
+    with open(config_path, "r") as file:
         return yaml.safe_load(file)
 
+
 # Load configuration
-config = load_config('teacher_config.yaml')
+config = load_config("config_teacher.yaml")
 
 # Extract args from config
-args = config['args']
+args = config["args"]
 
 # Initialize Horovod
 hvd.init()
@@ -41,7 +34,34 @@ run_config = DistributedImageNetRunConfig(
     **args, num_replicas=num_gpus, rank=hvd.rank()
 )
 
-net = OFAMobileNetV3(
+if args["model"] == "constant_V3":
+    from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV3
+
+    assert args["expand_list"] == [1, 2, 3, 4]
+    assert args["ks_list"] == [3, 5, 7]
+    assert args["depth_list"] == [2, 3, 4]
+    assert args["width_mult_list"] == 1.0
+    model = OFAMobileNetV3CtV3
+elif args["model"] == "constant_V2":
+    from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV2
+
+    assert args["expand_list"] == [0.9, 1, 1.1, 1.2]
+    assert args["ks_list"] == [3, 5, 7]
+    assert args["depth_list"] == [2, 3, 4]
+    assert args["width_mult_list"] == 1.0
+    model = OFAMobileNetV3CtV2
+elif args["model"] == "MIT":
+    from ofa.classification.elastic_nn.networks import OFAMobileNetV3
+
+    assert args["expand_list"] == [1, 2, 3, 4]
+    assert args["ks_list"] == [3, 5, 7]
+    assert args["depth_list"] == [2, 3, 4]
+    assert args["width_mult_list"] == 1.0
+    model = OFAMobileNetV3
+else:
+    raise NotImplementedError
+
+net = model(
     n_classes=run_config.data_provider.n_classes,
     bn_param=(args["bn_momentum"], args["bn_eps"]),
     dropout_rate=args["dropout"],
@@ -75,5 +95,11 @@ run_manager.broadcast()
 run_manager.load_model()
 
 args["teacher_model"] = None
+
+# Print all visible GPU devices
+print(torch.cuda.device_count())
+# Print their name
+print(torch.cuda.get_device_name(hvd.local_rank()))
+
 run_manager.train(args, warmup_epochs=args["warmup_epochs"])
 run_manager.save_model()

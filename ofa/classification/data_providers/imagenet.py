@@ -150,7 +150,7 @@ class ImagenetDataProvider(DataProvider):
 
     @staticmethod
     def name():
-        return "imagenette"
+        return "imagenet"
 
     @property
     def data_shape(self):

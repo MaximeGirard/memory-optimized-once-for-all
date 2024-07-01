@@ -1,22 +1,20 @@
 import yaml
 import torch
-from ofa.classification.networks import MobileNetV3Large
 import horovod.torch as hvd
-from ofa.classification.run_manager.run_config import DistributedCIFAR10RunConfig, DistributedImageNetRunConfig
+from ofa.classification.run_manager.run_config import DistributedImageNetRunConfig
 from ofa.classification.run_manager.distributed_run_manager import DistributedRunManager
-from ofa.classification.elastic_nn.networks import OFAMobileNetV3
-from ofa.classification.elastic_nn.training.progressive_shrinking import (
-    load_models,
-)
+from ofa.classification.elastic_nn.training.progressive_shrinking import load_models
+import os
 
 # Function to load YAML configuration
 def load_config(config_path):
-    with open(config_path, 'r') as file:
+    with open(config_path, "r") as file:
         return yaml.safe_load(file)
 
+
 # Load configuration
-config = load_config('teacher_config.yaml')
-args = config['args']
+config = load_config("config_teacher.yaml")
+args = config["args"]
 
 # Initialize Horovod
 hvd.init()
@@ -31,8 +29,36 @@ run_config = DistributedImageNetRunConfig(
     **args, num_replicas=num_gpus, rank=hvd.rank()
 )
 
+# Model selection based on config
+if args["model"] == "constant_V3":
+    from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV3
+
+    assert args["expand_list"] == [1, 2, 3, 4]
+    assert args["ks_list"] == [3, 5, 7]
+    assert args["depth_list"] == [2, 3, 4]
+    assert args["width_mult_list"] == 1.0
+    model = OFAMobileNetV3CtV3
+elif args["model"] == "constant_V2":
+    from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV2
+
+    assert args["expand_list"] == [0.9, 1, 1.1, 1.2]
+    assert args["ks_list"] == [3, 5, 7]
+    assert args["depth_list"] == [2, 3, 4]
+    assert args["width_mult_list"] == 1.0
+    model = OFAMobileNetV3CtV2
+elif args["model"] == "MIT":
+    from ofa.classification.elastic_nn.networks import OFAMobileNetV3
+
+    assert args["expand_list"] == [1, 2, 3, 4]
+    assert args["ks_list"] == [3, 5, 7]
+    assert args["depth_list"] == [2, 3, 4]
+    assert args["width_mult_list"] == 1.0
+    model = OFAMobileNetV3
+else:
+    raise NotImplementedError
+
 # Initialize the network
-net = OFAMobileNetV3(
+net = model(
     n_classes=run_config.data_provider.n_classes,
     bn_param=(args["bn_momentum"], args["bn_eps"]),
     dropout_rate=args["dropout"],
@@ -62,11 +88,14 @@ run_manager = DistributedRunManager(
     is_root=(hvd.rank() == 0),
 )
 
+run_manager.save_config()
+run_manager.broadcast()
 run_manager.load_model()
 
-# Assuming teacher_path is defined in your config, otherwise you might need to add it
-teacher_path = args.get("teacher_path", "teacher_model_MIT_imagenette/checkpoint/checkpoint.pth.tar")
+# Load the teacher model
+teacher_path = os.path.join(args["path"], "checkpoint/checkpoint.pth.tar")
 load_models(run_manager, teacher_net, model_path=teacher_path)
+
 
 # Evaluate the model
 def evaluate_model(run_manager):
@@ -82,6 +111,7 @@ def evaluate_model(run_manager):
             correct += (predicted == labels).sum().item()
 
     accuracy = 100 * correct / total
-    print(f'Test Accuracy: {accuracy:.2f}%')
+    print(f"Test Accuracy: {accuracy:.2f}%")
+
 
 evaluate_model(run_manager)

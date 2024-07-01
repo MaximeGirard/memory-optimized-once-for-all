@@ -1,12 +1,7 @@
 import yaml
-from ofa.classification.elastic_nn.networks import OFAMobileNetV3
 from ofa.classification.run_manager.run_config import DistributedImageNetRunConfig
 import horovod.torch as hvd
 import torch
-import torch.nn as nn
-from ofa.utils.peak_memory_efficiency import PeakMemoryEfficiency
-import matplotlib.pyplot as plt
-from ofa.utils.net_viz import draw_arch
 from ofa.utils import MyRandomResizedCrop
 import random
 import numpy as np
@@ -31,6 +26,8 @@ config = load_config('config.yaml')
 # Extract args and args_per_task from config
 args = config['args']
 args_per_task = config['args_per_task']
+tasks = config['tasks']
+tasks_phases = config['tasks_phases']
 TEST = config['TEST']
 
 # Function to update dictionary
@@ -64,7 +61,44 @@ run_config = DistributedImageNetRunConfig(
     **args, num_replicas=num_gpus, rank=hvd.rank()
 )
 
-net = OFAMobileNetV3(
+if args["model"] == "constant_V3":
+    from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV3
+
+    assert args["expand_list"] == [1, 2, 3, 4]
+    assert args["ks_list"] == [3, 5, 7]
+    assert args["depth_list"] == [2, 3, 4]
+    assert args["width_mult_list"] == 1.0
+    model = OFAMobileNetV3CtV3
+elif args["model"] == "constant_V2":
+    from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV2
+
+    assert args["expand_list"] == [0.9, 1, 1.1, 1.2]
+    assert args["ks_list"] == [3, 5, 7]
+    assert args["depth_list"] == [2, 3, 4]
+    assert args["width_mult_list"] == 1.0
+    model = OFAMobileNetV3CtV2
+elif args["model"] == "MIT":
+    from ofa.classification.elastic_nn.networks import OFAMobileNetV3
+
+    assert args["expand_list"] == [1, 2, 3, 4]
+    assert args["ks_list"] == [3, 5, 7]
+    assert args["depth_list"] == [2, 3, 4]
+    assert args["width_mult_list"] == 1.0
+    model = OFAMobileNetV3
+else:
+    raise NotImplementedError
+
+# Some more verification
+for task in tasks:
+    assert task in ['kernel', 'depth', 'expand']
+    if task + "_phases" in tasks_phases.keys():
+        assert len(tasks_phases[task + "_phases"]) > 0
+        for phase in tasks_phases[task + "_phases"]:
+            assert set(args_per_task[task + "_" + str(phase)]["ks_list"]).issubset(set(args["ks_list"]))
+            assert set(args_per_task[task + "_" + str(phase)]["expand_list"]).issubset(set(args["expand_list"]))
+            assert set(args_per_task[task + "_" + str(phase)]["depth_list"]).issubset(set(args["depth_list"]))
+
+net = model(
     n_classes=run_config.data_provider.n_classes,
     bn_param=(args["bn_momentum"], args["bn_eps"]),
     dropout_rate=args["dropout"],
@@ -97,7 +131,8 @@ if args["kd_ratio"] > 0:
     )
     args["teacher_model"] = net.get_active_subnet()
     args["teacher_model"].cuda()
-    load_models(run_manager, args["teacher_model"], model_path=args["teacher_path"])
+    teacher_path = os.path.join(args["teacher_path"], "checkpoint/model_best.pth.tar")
+    load_models(run_manager, args["teacher_model"], model_path=teacher_path)
 
 # Function to get validation function dictionary
 def get_validation_func_dict():
@@ -140,7 +175,8 @@ def train_task(task, phase=None):
     validate_func_dict = get_validation_func_dict()
 
     if task == "kernel":
-        load_models(run_manager, run_manager.net, args["ofa_checkpoint_path"])
+        pretrained_path = os.path.join(args["pretrained_model_path"], "checkpoint/model_best.pth.tar")
+        load_models(run_manager, run_manager.net, pretrained_path)
         set_net_constraint()
     elif task == "depth":
         args["dynamic_batch_size"] = config['depth_dynamic_batch_size']
@@ -167,20 +203,12 @@ def train_task(task, phase=None):
         ),
     )
 
-# Train tasks
-tasks = config['tasks']
-depth_phases = config['depth_phases']
-expand_phases = config['expand_phases']
-
 for task in tasks:
-    if task == "kernel":
-        train_task("kernel")
-    elif task == "depth":
-        for phase in depth_phases:
-            train_task("depth", phase)
-    elif task == "expand":
-        for phase in expand_phases:
-            train_task("expand", phase)
+    if task + "_phases" in tasks_phases.keys():
+        for phase in tasks_phases[task + "_phases"]:
+            train_task(task, phase)
+    else:
+        train_task(task)
 
 # Save the final model
 run_manager.save_model()

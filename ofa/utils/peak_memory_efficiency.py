@@ -4,17 +4,10 @@ import torch.nn as nn
 import copy
 
 from ofa.utils.layers import (
-    ConvLayer,
-    IdentityLayer,
-    LinearLayer,
     MBConvLayer,
     ResidualBlock,
     ZeroLayer,
 )
-
-from ofa.classification.elastic_nn.networks import OFAMobileNetV3
-from ofa.classification.networks import MobileNetV3
-
 
 # This class is used to predict the peak memory usage of a given architecture
 class PeakMemoryEfficiency(BaseEfficiencyModel):
@@ -50,6 +43,7 @@ class PeakMemoryEfficiency(BaseEfficiencyModel):
             return m.input_size.item() + m.output_size.item() + weight_size
 
         def count_block(m, get_list=False):
+
             assert isinstance(m, ResidualBlock)
 
             if m.conv is None or isinstance(m.conv, ZeroLayer):
@@ -97,6 +91,7 @@ class PeakMemoryEfficiency(BaseEfficiencyModel):
             net = net.module
         net = copy.deepcopy(net)
 
+        from ofa.classification.networks import MobileNetV3
         assert isinstance(net, MobileNetV3)
 
         net.apply(add_io_hooks)

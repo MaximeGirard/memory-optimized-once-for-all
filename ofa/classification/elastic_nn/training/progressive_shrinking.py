@@ -270,7 +270,7 @@ def train(run_manager, parameters, validate_func=None):
         validate_func = validate
 
     # Loop through each epoch
-    print("Start training for %d epochs (%d warmups epochs)" % (parameters["n_epochs"], parameters['warmup_epochs']))
+    print("Start training for %d epochs (+ %d warmups epochs)" % (parameters["n_epochs"], parameters['warmup_epochs']))
     for epoch in range(
         run_manager.start_epoch, parameters["n_epochs"] + parameters['warmup_epochs']
     ):
