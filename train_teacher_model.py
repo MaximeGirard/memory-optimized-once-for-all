@@ -1,3 +1,4 @@
+import yaml
 from ast import arg
 from ofa.classification.networks import MobileNetV3Large
 import horovod.torch as hvd
@@ -16,47 +17,16 @@ from ofa.classification.elastic_nn.training.progressive_shrinking import (
     train,
 )
 
-args = {
-    "path": "teacher_model_MIT_imagenette",
-    "teacher_path": None,
-    "dynamic_batch_size": 1,
-    "base_lr": 3e-2,
-    "n_epochs": 120,
-    "warmup_epochs": 5,
-    "warmup_lr": -1,
-    "ks_list": [3, 5, 7],
-    "expand_list": [3, 4, 6],
-    "depth_list": [2, 3, 4],
-    "manual_seed": 0,
-    "lr_schedule_type": "cosine",
-    "base_batch_size": 64,
-    "valid_size": 100,
-    "opt_type": "sgd",
-    "momentum": 0.9,
-    "no_nesterov": False,
-    "weight_decay": 3e-5,
-    "label_smoothing": 0,
-    "no_decay_keys": "bn#bias",
-    "fp16_allreduce": False,
-    "model_init": "he_fout",
-    "validation_frequency": 1,
-    "print_frequency": 10,
-    "n_worker": 8,
-    "resize_scale": 0.08,
-    "distort_color": "tf",
-    "image_size": [128, 160, 192, 224],
-    "continuous_size": True,
-    "not_sync_distributed_image_size": False,
-    "bn_momentum": 0.1,
-    "bn_eps": 1e-5,
-    "dropout": 0.1,
-    "base_stage_width": "proxyless",
-    "width_mult_list": 1.0,
-    "dy_conv_scaling_mode": 1,
-    "independent_distributed_sampling": False,
-    "kd_ratio": 1.0,
-    "kd_type": "ce",
-}
+# Function to load YAML configuration
+def load_config(config_path):
+    with open(config_path, 'r') as file:
+        return yaml.safe_load(file)
+
+# Load configuration
+config = load_config('teacher_config.yaml')
+
+# Extract args from config
+args = config['args']
 
 # Initialize Horovod
 hvd.init()
@@ -87,7 +57,6 @@ net.set_active_subnet(
     expand_ratio=max(args["expand_list"]),
     depth=max(args["depth_list"]),
 )
-
 teacher_net = net.get_active_subnet()
 
 # Initialize DistributedRunManager
@@ -100,13 +69,11 @@ run_manager = DistributedRunManager(
     backward_steps=args["dynamic_batch_size"],
     is_root=(hvd.rank() == 0),
 )
+
 run_manager.save_config()
 run_manager.broadcast()
-
 run_manager.load_model()
 
 args["teacher_model"] = None
-
 run_manager.train(args, warmup_epochs=args["warmup_epochs"])
-
 run_manager.save_model()

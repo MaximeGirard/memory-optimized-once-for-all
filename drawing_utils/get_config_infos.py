@@ -4,7 +4,7 @@ import torch
 from ofa.nas.accuracy_predictor import MobileNetArchEncoder
 from ofa.nas.efficiency_predictor import Mbv3FLOPsModel
 from ofa.nas.search_algorithm import EvolutionFinder
-from ofa.classification.data_providers.imagenet import ImagenetDataProvider
+from ofa.classification.data_providers.imagenette import ImagenetDataProvider
 from ofa.classification.run_manager import (
     ImagenetRunConfig,
     DistributedImageNetRunConfig,

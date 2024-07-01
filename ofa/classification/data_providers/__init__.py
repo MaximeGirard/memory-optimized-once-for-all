@@ -3,4 +3,5 @@
 # International Conference on Learning Representations (ICLR), 2020.
 
 from .imagenet import *
+from .imagenette import *
 from .cifar10 import *

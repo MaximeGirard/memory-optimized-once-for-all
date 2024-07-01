@@ -13,11 +13,11 @@ import torchvision.datasets as datasets
 from .base_provider import DataProvider
 from ofa.utils.my_dataloader import MyRandomResizedCrop, MyDistributedSampler
 
-__all__ = ["ImagenetDataProvider"]
+__all__ = ["ImagenetteDataProvider"]
 
 
-class ImagenetDataProvider(DataProvider):
-    DEFAULT_PATH = "/imagenet/"
+class ImagenetteDataProvider(DataProvider):
+    DEFAULT_PATH = "/imagenette2/"
 
     def __init__(
         self,
@@ -165,18 +165,23 @@ class ImagenetDataProvider(DataProvider):
         if self._save_path is None:
             self._save_path = self.DEFAULT_PATH
             if not os.path.exists(self._save_path):
-                self._save_path = os.path.join("imagenet/")
+                self._save_path = os.path.join("imagenette2/")
         return self._save_path
 
     @property
     def data_url(self):
         raise ValueError("unable to download %s" % self.name())
 
+    def remap_label(self, label):
+        # To remap for imagenette
+        label_mapping = [0, 217, 482, 491, 497, 566, 569, 571, 574, 701]
+        return label_mapping[label]
+
     def train_dataset(self, _transforms):
-        return datasets.ImageFolder(self.train_path, _transforms)
+        return datasets.ImageFolder(self.train_path, _transforms, target_transform=self.remap_label)
 
     def test_dataset(self, _transforms):
-        return datasets.ImageFolder(self.valid_path, _transforms)
+        return datasets.ImageFolder(self.valid_path, _transforms, target_transform=self.remap_label)
 
     @property
     def train_path(self):

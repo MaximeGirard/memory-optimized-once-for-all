@@ -1,5 +1,6 @@
+import yaml
 import torch
-from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV3
+from ofa.classification.elastic_nn.networks import OFAMobileNetV3
 import horovod.torch as hvd
 from ofa.classification.run_manager.run_config import (
     DistributedCIFAR10RunConfig,
@@ -10,48 +11,16 @@ from tqdm import tqdm
 from ofa.utils import AverageMeter
 import random
 
-# Arguments (should match the arguments used during training)
-args = {
-    "path": "trained_model_V3_imagenette",
-    "teacher_path": None,
-    "dynamic_batch_size": 1,
-    "base_lr": 3e-2,
-    "n_epochs": 1,
-    "warmup_epochs": 0,
-    "warmup_lr": -1,
-    "ks_list": [3, 5, 7],
-    "expand_list": [3, 4, 6],
-    "depth_list": [2, 3, 4],
-    "manual_seed": 0,
-    "lr_schedule_type": "cosine",
-    "base_batch_size": 64,
-    "valid_size": 100,
-    "opt_type": "sgd",
-    "momentum": 0.9,
-    "no_nesterov": False,
-    "weight_decay": 3e-5,
-    "label_smoothing": 0,
-    "no_decay_keys": "bn#bias",
-    "fp16_allreduce": False,
-    "model_init": "he_fout",
-    "validation_frequency": 1,
-    "print_frequency": 10,
-    "n_worker": 12,
-    "resize_scale": 0.08,
-    "distort_color": "tf",
-    "image_size": [128, 160, 192, 224],
-    "continuous_size": True,
-    "not_sync_distributed_image_size": False,
-    "bn_momentum": 0.1,
-    "bn_eps": 1e-5,
-    "dropout": 0.1,
-    "base_stage_width": "proxyless",
-    "width_mult_list": 1.0,
-    "dy_conv_scaling_mode": 1,
-    "independent_distributed_sampling": False,
-    "kd_ratio": 1.0,
-    "kd_type": "ce",
-}
+# Function to load YAML configuration
+def load_config(config_path):
+    with open(config_path, 'r') as file:
+        return yaml.safe_load(file)
+
+# Load configuration
+config = load_config('config.yaml')
+
+# Extract args from config
+args = config['args']
 
 # Initialize Horovod
 hvd.init()
@@ -88,7 +57,6 @@ run_manager = DistributedRunManager(
     backward_steps=args["dynamic_batch_size"],
     is_root=(hvd.rank() == 0),
 )
-
 run_manager.load_model()
 
 # Evaluate the model
@@ -97,15 +65,11 @@ model = run_manager.net
 data_loader = run_manager.run_config.test_loader
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-config = {
-    "ks": [7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7],
-    "e": [6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6],
-    "d": [4, 4, 4, 4],
-    "image_size": 224,
-}
+# Load subnet config from YAML
+subnet_config = config['subnet_config']
 
-net.set_active_subnet(ks=config["ks"], e=config["e"], d=config["d"])
-run_config.data_provider.assign_active_img_size(config["image_size"])
+net.set_active_subnet(ks=subnet_config["ks"], e=subnet_config["e"], d=subnet_config["d"])
+run_config.data_provider.assign_active_img_size(subnet_config["image_size"])
 run_manager.reset_running_statistics(net)
 print(net.get_current_config())
 
@@ -120,3 +84,5 @@ with torch.no_grad():
         # Update tqdm description with accuracy info
         pbar.set_postfix({"acc": accuracies.avg, "img_size": images.size(2)})
         pbar.update(1)
+
+print(f"Final accuracy: {accuracies.avg}")

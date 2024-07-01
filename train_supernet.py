@@ -1,5 +1,6 @@
+import yaml
 from ofa.classification.elastic_nn.networks import OFAMobileNetV3
-from ofa.classification.run_manager.run_config import DistributedImageNetRunConfig, DistributedCIFAR10RunConfig
+from ofa.classification.run_manager.run_config import DistributedImageNetRunConfig
 import horovod.torch as hvd
 import torch
 import torch.nn as nn
@@ -19,6 +20,19 @@ from ofa.classification.elastic_nn.training.progressive_shrinking import (
     train,
 )
 
+# Function to load YAML configuration
+def load_config(config_path):
+    with open(config_path, 'r') as file:
+        return yaml.safe_load(file)
+
+# Load configuration
+config = load_config('config.yaml')
+
+# Extract args and args_per_task from config
+args = config['args']
+args_per_task = config['args_per_task']
+TEST = config['TEST']
+
 # Function to update dictionary
 def update_dict(original_dict, task):
     original_dict.update(args_per_task[task])
@@ -27,116 +41,6 @@ def update_dict(original_dict, task):
 # Initialize Horovod
 hvd.init()
 torch.cuda.set_device(hvd.local_rank())
-
-TEST = False
-
-args = {
-    "path": "trained_model_MIT_imagenette",
-    "teacher_path": "teacher_model_MIT_imagenette/checkpoint/checkpoint.pth.tar",
-    "ofa_checkpoint_path": "teacher_model_MIT_imagenette/checkpoint/checkpoint.pth.tar",
-    "dynamic_batch_size": 1,
-    "base_lr": 3e-2,
-    "warmup_epochs": 0,
-    "warmup_lr": -1,
-    "ks_list": [3, 5, 7],
-    "expand_list": [3, 4, 6],
-    "depth_list": [2, 3, 4],
-    "manual_seed": 0,
-    "lr_schedule_type": "cosine",
-    "base_batch_size": 64,
-    "valid_size": 100,
-    "opt_type": "sgd",
-    "momentum": 0.9,
-    "no_nesterov": False,
-    "weight_decay": 3e-5,
-    "label_smoothing": 0.1,
-    "no_decay_keys": "bn#bias",
-    "fp16_allreduce": False,
-    "model_init": "he_fout",
-    "validation_frequency": 1,
-    "print_frequency": 10,
-    "n_worker": 12,
-    "resize_scale": 0.08,
-    "distort_color": "tf",
-    "image_size": [128, 160, 192, 224],
-    "continuous_size": True,
-    "not_sync_distributed_image_size": False,
-    "bn_momentum": 0.1,
-    "bn_eps": 1e-5,
-    "dropout": 0.1,
-    "base_stage_width": "proxyless",
-    "width_mult_list": 1.0,
-    "dy_conv_scaling_mode": 1,
-    "independent_distributed_sampling": False,
-    "kd_ratio": 1.0,
-    "kd_type": "ce",
-}
-
-args_per_task = {
-    "kernel": {
-        "n_epochs": 120 if not TEST else 1,
-        "base_lr": 3e-2,
-        "warmup_epochs": 0,
-        "warmup_lr": -1,
-        "ks_list": [3, 5, 7],
-        "expand_list": [6],
-        "depth_list": [4],
-    },
-    "depth_1": {
-        "n_epochs": 25 if not TEST else 1,
-        "base_lr": 2.5e-3,
-        "warmup_epochs": 0,
-        "warmup_lr": -1,
-        "ks_list": [3, 5, 7],
-        "expand_list": [6],
-        "depth_list": [3, 4],
-    },
-    "depth_2": {
-        "n_epochs": 120 if not TEST else 1,
-        "base_lr": 7.5e-3,
-        "warmup_epochs": 0,
-        "warmup_lr": -1,
-        "ks_list": [3, 5, 7],
-        "expand_list": [6],
-        "depth_list": [2, 3, 4],
-    },
-    "expand_1": {
-        "n_epochs": 25 if not TEST else 1,
-        "base_lr": 2.5e-3,
-        "warmup_epochs": 0,
-        "warmup_lr": -1,
-        "ks_list": [3, 5, 7],
-        "expand_list": [6],
-        "depth_list": [2, 3, 4],
-    },
-    "expand_2": {
-        "n_epochs": 25 if not TEST else 1,
-        "base_lr": 7.5e-3,
-        "warmup_epochs": 0,
-        "warmup_lr": -1,
-        "ks_list": [3, 5, 7],
-        "expand_list": [4, 6],
-        "depth_list": [2, 3, 4],
-    },
-    "expand_3": {
-        "n_epochs": 25 if not TEST else 1,
-        "base_lr": 7.5e-3,
-        "warmup_epochs": 0,
-        "warmup_lr": -1,
-        "ks_list": [3, 5, 7],
-        "expand_list": [3, 4, 6],
-        "depth_list": [2, 3, 4],
-    },
-    # "expand_4": {
-    #     "n_epochs": 120 if not TEST else 1,
-    #     "base_lr": 7.5e-3,
-    #     "warmup_epochs": 0,
-    #     "warmup_lr": -1,
-    #     "ks_list": [3, 5, 7],
-    #     "expand_list": [1, 2, 3, 4],
-    #     "depth_list": [2, 3, 4],
-    # },
-}
 
 # Create directories
 os.makedirs(args["path"], exist_ok=True)
@@ -214,7 +118,6 @@ def get_validation_func_dict():
     print("Validation function parameters:", validate_func_dict)
     return validate_func_dict
 
-
 # Function to set network constraint
 def set_net_constraint():
     dynamic_net = run_manager.net
@@ -225,7 +128,6 @@ def set_net_constraint():
         "Net constraint set :\n ks_list=%s\n expand_ratio_list=%s\n depth_list=%s"
         % (args["ks_list"], args["expand_list"], args["depth_list"])
     )
-
 
 # Train function
 def train_task(task, phase=None):
@@ -241,22 +143,20 @@ def train_task(task, phase=None):
         load_models(run_manager, run_manager.net, args["ofa_checkpoint_path"])
         set_net_constraint()
     elif task == "depth":
-        args["dynamic_batch_size"] = 2
+        args["dynamic_batch_size"] = config['depth_dynamic_batch_size']
         if phase == 1:
             update_dict(args, "depth_1")
         else:
             update_dict(args, "depth_2")
         set_net_constraint()
     elif task == "expand":
-        args["dynamic_batch_size"] = 4
+        args["dynamic_batch_size"] = config['expand_dynamic_batch_size']
         if phase == 1:
             update_dict(args, "expand_1")
-        elif phase==2:
+        elif phase == 2:
             update_dict(args, "expand_2")
-        elif phase==3:
+        elif phase == 3:
             update_dict(args, "expand_3")
-        else:
-            update_dict(args, "expand_4")
         set_net_constraint()
 
     train(
@@ -267,11 +167,10 @@ def train_task(task, phase=None):
         ),
     )
 
-
 # Train tasks
-tasks = ["kernel", "depth", "expand"]
-depth_phases = [1, 2]
-expand_phases = [1, 2, 3]
+tasks = config['tasks']
+depth_phases = config['depth_phases']
+expand_phases = config['expand_phases']
 
 for task in tasks:
     if task == "kernel":
