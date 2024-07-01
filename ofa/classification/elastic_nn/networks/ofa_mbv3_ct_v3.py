@@ -3,6 +3,7 @@
 # International Conference on Learning Representations (ICLR), 2020.
 
 import copy
+from hmac import new
 import random
 
 from ofa.classification.elastic_nn.modules.dynamic_layers import (
@@ -56,36 +57,62 @@ class OFAMobileNetV3CtV3(MobileNetV3):
 
         base_stage_width = [3, 8, 24]
 
-        in_size = 56 # reference image size : 224
-        e = 3 # reference expansion factor
+        in_size = 56  # reference image size : 224
+        e = 4  # reference expansion factor
         c = 24
-        
-        prev_depthwise_mem = e * c * in_size**2 + e * c * 49 + e * c * (in_size**2)/4
-        prev_expansion_mem = e * c * in_size**2 + e * c * 49 + c * in_size**2
-        
-        if prev_depthwise_mem > prev_expansion_mem:
-            c1 = (c*((in_size**2)/5 + 49)) / ((in_size**2)/2 + 49)
-            c2 = (-(in_size**2)/4 + e*(in_size**2)/4 + (((in_size**2)/4 + e*(in_size**2)/4)**2 + 4*prev_depthwise_mem)**0.5) / (2*e)
-            c = min(c1, c2)
-        else:
-            c = (-(in_size**2)/4 + e*(in_size**2)/4 + (((in_size**2)/4 + e*(in_size**2)/4)**2 + 4*prev_expansion_mem)**0.5) / (2*e)
 
-        in_size = in_size / 2
-        c = make_divisible(c, MyNetwork.CHANNEL_DIVISIBLE)
-        base_stage_width.append(c)
+        for i in range(3, self.n_stages + 4):
+            prev_depthwise_mem = e * c * in_size**2 + e * c * 49 + e * c * in_size**2
+            prev_expansion_mem = c * in_size**2 + e * c**2 + e * c * in_size**2
+
+            print("prev_depthwise_mem", prev_depthwise_mem)
+            print("prev_expansion_mem", prev_expansion_mem)
+
+            if prev_depthwise_mem > prev_expansion_mem:
+                c1 = (2 * c * (in_size**2 + 49)) / ((in_size**2) / 2 + 49)
+                new_m_depthwise = (
+                    e * c1 * (in_size**2) / 4 + e * c1 * 49 + e * c1 * (in_size**2) / 4
+                )
+                print("c1", c1, "new_m_depthwise", new_m_depthwise)
+                delta = (
+                    in_size**2 / 4 + e * in_size**2 / 4
+                ) ** 2 + 4 * e * prev_depthwise_mem
+                c2 = (-(in_size**2 / 4 + e * in_size**2 / 4) + (delta) ** 0.5) / (2 * e)
+                new_m_expansion = (
+                    c2 * (in_size**2) / 4 + e * c2**2 + e * c2 * (in_size**2) / 4
+                )
+                print("c2", c2, "new_m_expansion", new_m_expansion)
+                c = min(c1, c2)
+            else:
+                delta = (
+                    in_size**2 / 4 + e * in_size**2 / 4
+                ) ** 2 + 4 * e * prev_expansion_mem
+                c1 = (-(in_size**2 / 4 + e * in_size**2 / 4) + (delta) ** 0.5) / (2 * e)
+
+                new_m_expansion = (
+                    c1 * (in_size**2) / 4 + e * c1**2 + e * c1 * (in_size**2) / 4
+                )
+                print("c1", c1, "new_m_expansion", new_m_expansion)
+                c = c1
+
+            in_size = in_size / 2
+            c = make_divisible(c, MyNetwork.CHANNEL_DIVISIBLE)
+            base_stage_width.append(c)
+
+        print(base_stage_width)
 
         # result
-        #base_stage_width = [3, 8, 24, 96, 288, 368, 392, 400, 400]
+        # base_stage_width = [3, 8, 24, 96, 288, 368, 392, 400, 400]
 
         # Directly computed in step before
         # final_expand_width = make_divisible(
         #     8 * self.width_mult, MyNetwork.CHANNEL_DIVISIBLE
         # )
         # last_channel = make_divisible(8 * self.width_mult, MyNetwork.CHANNEL_DIVISIBLE)
-        
-        #base_stage_width.append(final_expand_width)
-        #base_stage_width.append(last_channel)
-        
+
+        # base_stage_width.append(final_expand_width)
+        # base_stage_width.append(last_channel)
+
         final_expand_width = base_stage_width[-2]
         last_channel = base_stage_width[-1]
 
