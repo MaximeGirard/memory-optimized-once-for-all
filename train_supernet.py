@@ -60,6 +60,7 @@ MyRandomResizedCrop.SYNC_DISTRIBUTED = not args["not_sync_distributed_image_size
 
 # Build run config
 num_gpus = hvd.size()
+print("Number of GPUs:", num_gpus)
 args["init_lr"] = args["base_lr"] * num_gpus
 args["train_batch_size"] = args["base_batch_size"]
 args["test_batch_size"] = args["base_batch_size"] * 4
@@ -210,6 +211,8 @@ def train_task(task, phase=None):
         use_wandb=wandb_config["use_wandb"],
         wandb_tag=task_phase
     )
+    
+    run_manager.save_model(model_name=f"checkpoint-{task_phase}.pth.tar")
 
 for task in tasks:
     if task + "_phases" in tasks_phases.keys():

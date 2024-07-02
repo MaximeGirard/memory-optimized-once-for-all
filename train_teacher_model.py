@@ -33,6 +33,7 @@ if wandb_config["use_wandb"] and hvd.rank() == 0:
 
 # Build run config
 num_gpus = hvd.size()
+print("Number of GPUs:", num_gpus)
 args["init_lr"] = args["base_lr"] * num_gpus
 args["train_batch_size"] = args["base_batch_size"]
 args["test_batch_size"] = args["base_batch_size"] * 4
