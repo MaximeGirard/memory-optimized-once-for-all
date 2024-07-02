@@ -65,15 +65,11 @@ class OFAMobileNetV3CtV3(MobileNetV3):
             prev_depthwise_mem = e * c * in_size**2 + e * c * 49 + e * c * in_size**2
             prev_expansion_mem = c * in_size**2 + e * c**2 + e * c * in_size**2
 
-            print("prev_depthwise_mem", prev_depthwise_mem)
-            print("prev_expansion_mem", prev_expansion_mem)
-
             if prev_depthwise_mem > prev_expansion_mem:
                 c1 = (2 * c * (in_size**2 + 49)) / ((in_size**2) / 2 + 49)
                 new_m_depthwise = (
                     e * c1 * (in_size**2) / 4 + e * c1 * 49 + e * c1 * (in_size**2) / 4
                 )
-                print("c1", c1, "new_m_depthwise", new_m_depthwise)
                 delta = (
                     in_size**2 / 4 + e * in_size**2 / 4
                 ) ** 2 + 4 * e * prev_depthwise_mem
@@ -81,7 +77,6 @@ class OFAMobileNetV3CtV3(MobileNetV3):
                 new_m_expansion = (
                     c2 * (in_size**2) / 4 + e * c2**2 + e * c2 * (in_size**2) / 4
                 )
-                print("c2", c2, "new_m_expansion", new_m_expansion)
                 c = min(c1, c2)
             else:
                 delta = (
@@ -92,17 +87,14 @@ class OFAMobileNetV3CtV3(MobileNetV3):
                 new_m_expansion = (
                     c1 * (in_size**2) / 4 + e * c1**2 + e * c1 * (in_size**2) / 4
                 )
-                print("c1", c1, "new_m_expansion", new_m_expansion)
                 c = c1
 
             in_size = in_size / 2
             c = make_divisible(c, MyNetwork.CHANNEL_DIVISIBLE)
             base_stage_width.append(c)
 
-        print(base_stage_width)
-
         # result
-        # base_stage_width = [3, 8, 24, 96, 288, 368, 392, 400, 400]
+        # base_stage_width = [3, 8, 24, 96, 288, 360, 384, 392, 392]
 
         # Directly computed in step before
         # final_expand_width = make_divisible(

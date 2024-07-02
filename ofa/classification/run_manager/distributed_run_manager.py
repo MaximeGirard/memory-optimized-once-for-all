@@ -11,6 +11,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
 from tqdm import tqdm
+import wandb
 
 from ofa.utils import (
     cross_entropy_with_label_smoothing,
@@ -424,17 +425,38 @@ class DistributedRunManager:
                 t.update(1)
                 end = time.time()
 
-        return losses.avg.item(), self.get_metric_vals(metric_dict)
+        return losses.avg.item(), self.get_metric_vals(metric_dict), new_lr
 
-    def train(self, args, warmup_epochs=5, warmup_lr=0):
+    def train(self, args, warmup_epochs=5, warmup_lr=0, use_wandb=False, wandb_tag="main"):
         print("Start training for %d epochs" % self.run_config.n_epochs)
         for epoch in range(self.start_epoch, self.run_config.n_epochs + warmup_epochs):
-            train_loss, (train_top1, train_top5) = self.train_one_epoch(
+            train_loss, (train_top1, train_top5), lr = self.train_one_epoch(
                 args, epoch, warmup_epochs, warmup_lr
             )
+            
             img_size, val_loss, val_top1, val_top5 = self.validate_all_resolution(
                 epoch, is_test=False
             )
+            
+            # Log metrics to wandb if enabled
+            if use_wandb and self.is_root:
+                wandb.log({
+                    "tag": wandb_tag,
+                    "epoch": epoch,
+                    "train_loss": train_loss,
+                    "train_top1": train_top1,
+                    "train_top5": train_top5,
+                    "learning_rate": lr,
+                }, step=epoch)
+                
+                for i_s, v_top_1, v_top_5, v_loss in zip(img_size, val_top1, val_top5, val_loss):
+                    wandb.log({
+                        "tag": wandb_tag,
+                        "epoch": epoch,
+                        f"val_top1_{i_s}": v_top_1,
+                        f"val_top5_{i_s}": v_top_5,
+                        f"val_loss_{i_s}": v_loss,
+                    }, step=epoch)
 
             is_best = list_mean(val_top1) > self.best_acc
             self.best_acc = max(self.best_acc, list_mean(val_top1))

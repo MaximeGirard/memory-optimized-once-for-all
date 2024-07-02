@@ -6,6 +6,7 @@ from ofa.utils import MyRandomResizedCrop
 import random
 import numpy as np
 import os
+import wandb
 from ofa.classification.run_manager.distributed_run_manager import (
     DistributedRunManager,
 )
@@ -29,6 +30,7 @@ args_per_task = config['args_per_task']
 tasks = config['tasks']
 tasks_phases = config['tasks_phases']
 TEST = config['TEST']
+wandb_config = config["wandb"]
 
 # Function to update dictionary
 def update_dict(original_dict, task):
@@ -38,6 +40,10 @@ def update_dict(original_dict, task):
 # Initialize Horovod
 hvd.init()
 torch.cuda.set_device(hvd.local_rank())
+
+# Initialize wandb if enabled
+if wandb_config["use_wandb"] and hvd.rank() == 0:
+    wandb.init(project=wandb_config["project_name"], config=args, reinit=True)
 
 # Create directories
 os.makedirs(args["path"], exist_ok=True)
@@ -201,6 +207,8 @@ def train_task(task, phase=None):
         lambda _run_manager, epoch, is_test: validate(
             _run_manager, epoch, is_test, **validate_func_dict
         ),
+        use_wandb=wandb_config["use_wandb"],
+        wandb_tag=task_phase
     )
 
 for task in tasks:

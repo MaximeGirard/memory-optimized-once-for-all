@@ -7,6 +7,7 @@ import torch
 from ofa.classification.run_manager.distributed_run_manager import (
     DistributedRunManager,
 )
+import wandb
 
 
 # Function to load YAML configuration
@@ -20,10 +21,15 @@ config = load_config("config_teacher.yaml")
 
 # Extract args from config
 args = config["args"]
+wandb_config = config["wandb"]
 
 # Initialize Horovod
 hvd.init()
 torch.cuda.set_device(hvd.local_rank())
+
+# Initialize wandb if enabled
+if wandb_config["use_wandb"] and hvd.rank() == 0:
+    wandb.init(project=wandb_config["project_name"], config=args, reinit=True)
 
 # Build run config
 num_gpus = hvd.size()
@@ -101,5 +107,10 @@ print(torch.cuda.device_count())
 # Print their name
 print(torch.cuda.get_device_name(hvd.local_rank()))
 
-run_manager.train(args, warmup_epochs=args["warmup_epochs"])
+run_manager.train(
+    args,
+    warmup_epochs=args["warmup_epochs"],
+    use_wandb=wandb_config["use_wandb"],
+    wandb_tag="teacher",
+)
 run_manager.save_model()

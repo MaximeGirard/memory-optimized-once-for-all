@@ -40,3 +40,7 @@ args:
   independent_distributed_sampling: false
   kd_ratio: 1.0
   kd_type: "ce"
+
+wandb:
+  use_wandb: true
+  project_name: "once-for-all-memory-constant"  
