@@ -58,8 +58,21 @@ random.seed(args["manual_seed"])
 MyRandomResizedCrop.CONTINUOUS = args["continuous_size"]
 MyRandomResizedCrop.SYNC_DISTRIBUTED = not args["not_sync_distributed_image_size"]
 
+print("Rank:", hvd.rank())
+
 # Build run config
 num_gpus = hvd.size()
+print("Number of GPUs:", num_gpus)
+
+# Print all visible GPU devices
+print("Number of visible GPUs:", torch.cuda.device_count())
+# Print their name
+print("This process is running on :", torch.cuda.get_device_name(hvd.local_rank()))
+# the others :
+for i in range(torch.cuda.device_count()):
+    if i != hvd.local_rank():
+        print("Another GPU is available :", torch.cuda.get_device_name(i))
+        
 print("Number of GPUs:", num_gpus)
 args["init_lr"] = args["base_lr"] * num_gpus
 args["train_batch_size"] = args["base_batch_size"]
