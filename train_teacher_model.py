@@ -25,16 +25,27 @@ wandb_config = config["wandb"]
 
 # Initialize Horovod
 hvd.init()
-print("Rank:", hvd.rank())
 torch.cuda.set_device(hvd.local_rank())
 
 # Initialize wandb if enabled
 if wandb_config["use_wandb"] and hvd.rank() == 0:
     wandb.init(project=wandb_config["project_name"], config=args, reinit=True)
 
+print("Rank:", hvd.rank())
+
 # Build run config
 num_gpus = hvd.size()
 print("Number of GPUs:", num_gpus)
+
+# Print all visible GPU devices
+print("Number of visible GPUs:", torch.cuda.device_count())
+# Print their name
+print("This process is running on :", torch.cuda.get_device_name(hvd.local_rank()))
+# the others :
+for i in range(torch.cuda.device_count()):
+    if i != hvd.local_rank():
+        print("Another GPU is available :", torch.cuda.get_device_name(i))
+
 args["init_lr"] = args["base_lr"] * num_gpus
 args["train_batch_size"] = args["base_batch_size"]
 args["test_batch_size"] = args["base_batch_size"] * 4
@@ -103,11 +114,6 @@ run_manager.broadcast()
 run_manager.load_model()
 
 args["teacher_model"] = None
-
-# Print all visible GPU devices
-print(torch.cuda.device_count())
-# Print their name
-print(torch.cuda.get_device_name(hvd.local_rank()))
 
 run_manager.train(
     args,
