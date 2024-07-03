@@ -25,6 +25,7 @@ wandb_config = config["wandb"]
 
 # Initialize Horovod
 hvd.init()
+print("Rank:", hvd.rank())
 torch.cuda.set_device(hvd.local_rank())
 
 # Initialize wandb if enabled
