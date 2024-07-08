@@ -1,9 +1,7 @@
 import yaml
 import torch
-from ofa.classification.elastic_nn.networks import OFAMobileNetV3
 import horovod.torch as hvd
 from ofa.classification.run_manager.run_config import (
-    DistributedCIFAR10RunConfig,
     DistributedImageNetRunConfig,
 )
 from ofa.classification.run_manager.distributed_run_manager import DistributedRunManager
@@ -35,8 +33,36 @@ run_config = DistributedImageNetRunConfig(
     **args, num_replicas=num_gpus, rank=hvd.rank()
 )
 
+# Model selection based on config
+if args["model"] == "constant_V3":
+    from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV3
+
+    assert args["expand_list"] == [1, 2, 3, 4]
+    assert args["ks_list"] == [3, 5, 7]
+    assert args["depth_list"] == [2, 3, 4]
+    assert args["width_mult_list"] == 1.0
+    model = OFAMobileNetV3CtV3
+elif args["model"] == "constant_V2":
+    from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV2
+
+    assert args["expand_list"] == [0.9, 1, 1.1, 1.2]
+    assert args["ks_list"] == [3, 5, 7]
+    assert args["depth_list"] == [2, 3, 4]
+    assert args["width_mult_list"] == 1.0
+    model = OFAMobileNetV3CtV2
+elif args["model"] == "MIT":
+    from ofa.classification.elastic_nn.networks import OFAMobileNetV3
+
+    assert args["expand_list"] == [1, 2, 3, 4]
+    assert args["ks_list"] == [3, 5, 7]
+    assert args["depth_list"] == [2, 3, 4]
+    assert args["width_mult_list"] == 1.0
+    model = OFAMobileNetV3
+else:
+    raise NotImplementedError
+
 # Initialize the network
-net = OFAMobileNetV3(
+net = model(
     n_classes=run_config.data_provider.n_classes,
     bn_param=(args["bn_momentum"], args["bn_eps"]),
     dropout_rate=args["dropout"],
