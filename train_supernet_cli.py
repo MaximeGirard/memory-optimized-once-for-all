@@ -150,16 +150,16 @@ run_manager.save_config()
 run_manager.broadcast()
 
 # Load teacher model if needed
-if args["kd_ratio"] > 0:
+if base_args["kd_ratio"] > 0:
     net.set_active_subnet(
-        ks=max(args["ks_list"]),
-        expand_ratio=max(args["expand_list"]),
-        depth=max(args["depth_list"]),
+        ks=max(base_args["ks_list"]),
+        expand_ratio=max(base_args["expand_list"]),
+        depth=max(base_args["depth_list"]),
     )
-    args["teacher_model"] = net.get_active_subnet()
-    args["teacher_model"].cuda()
-    teacher_path = os.path.join(args["teacher_path"], "checkpoint/model_best.pth.tar")
-    load_models(run_manager, args["teacher_model"], model_path=teacher_path)
+    base_args["teacher_model"] = net.get_active_subnet()
+    base_args["teacher_model"].cuda()
+    teacher_path = os.path.join(base_args["teacher_path"], "checkpoint/model_best.pth.tar")
+    load_models(run_manager, base_args["teacher_model"], model_path=teacher_path)
 
 prev = {
     "depth": "kernel",
