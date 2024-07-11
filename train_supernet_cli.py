@@ -96,29 +96,29 @@ run_config = DistributedImageNetRunConfig(
     **base_args, num_replicas=num_gpus, rank=hvd.rank()
 )
 
-if args["model"] == "constant_V3":
+if base_args["model"] == "constant_V3":
     from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV3
 
-    assert args["expand_list"] == [1, 2, 3, 4]
-    assert args["ks_list"] == [3, 5, 7]
-    assert args["depth_list"] == [2, 3, 4]
-    assert args["width_mult_list"] == 1.0
+    assert base_args["expand_list"] == [1, 2, 3, 4]
+    assert base_args["ks_list"] == [3, 5, 7]
+    assert base_args["depth_list"] == [2, 3, 4]
+    assert base_args["width_mult_list"] == 1.0
     model = OFAMobileNetV3CtV3
-elif args["model"] == "constant_V2":
+elif base_args["model"] == "constant_V2":
     from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV2
 
-    assert args["expand_list"] == [0.9, 1, 1.1, 1.2]
-    assert args["ks_list"] == [3, 5, 7]
-    assert args["depth_list"] == [2, 3, 4]
-    assert args["width_mult_list"] == 1.0
+    assert base_args["expand_list"] == [0.9, 1, 1.1, 1.2]
+    assert base_args["ks_list"] == [3, 5, 7]
+    assert base_args["depth_list"] == [2, 3, 4]
+    assert base_args["width_mult_list"] == 1.0
     model = OFAMobileNetV3CtV2
-elif args["model"] == "MIT":
+elif base_args["model"] == "MIT":
     from ofa.classification.elastic_nn.networks import OFAMobileNetV3
 
-    assert args["expand_list"] == [1, 2, 3, 4]
-    assert args["ks_list"] == [3, 5, 7]
-    assert args["depth_list"] == [2, 3, 4]
-    assert args["width_mult_list"] == 1.0
+    assert base_args["expand_list"] == [1, 2, 3, 4]
+    assert base_args["ks_list"] == [3, 5, 7]
+    assert base_args["depth_list"] == [2, 3, 4]
+    assert base_args["width_mult_list"] == 1.0
     model = OFAMobileNetV3
 else:
     raise NotImplementedError
