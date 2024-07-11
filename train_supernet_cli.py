@@ -123,13 +123,18 @@ run_manager = DistributedRunManager(
 run_manager.save_config()
 run_manager.broadcast()
 
+prev = {
+    'depth' : 'kernel',
+    'expand' : 'depth',
+}
+
 # Load checkpoint
 base_path = base_args["path"]
 if args.step == "kernel":
     checkpoint_path = os.path.join(base_args["teacher_path"], "checkpoint/model_best.pth.tar")
 else:
     prev_phase = args.phase - 1
-    prev_step_phase = f"{args.step}_{prev_phase}" if prev_phase > 0 else args.step
+    prev_step_phase = f"{args.step}_{prev_phase}" if prev_phase > 0 else prev[args.step]
     checkpoint_path = os.path.join(base_path, 'checkpoint', f"checkpoint-{prev_step_phase}.pth.tar")
 
 load_models(run_manager, run_manager.net, checkpoint_path)
