@@ -130,7 +130,7 @@ if args.step == "kernel":
 else:
     prev_phase = args.phase - 1
     prev_step_phase = f"{args.step}_{prev_phase}" if prev_phase > 0 else args.step
-    checkpoint_path = os.path.join(base_path, f"checkpoint-{prev_step_phase}.pth.tar")
+    checkpoint_path = os.path.join(base_path, 'checkpoint', f"checkpoint-{prev_step_phase}.pth.tar")
 
 load_models(run_manager, run_manager.net, checkpoint_path)
 
