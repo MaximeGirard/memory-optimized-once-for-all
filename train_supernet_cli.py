@@ -29,7 +29,7 @@ parser.add_argument('--phase', type=int, required=True)
 args = parser.parse_args()
 
 # Load configuration
-config = load_config('config2.yaml')
+config = load_config('config_cli.yaml')
 
 # Extract args and args_per_task from config
 TEST = config['TEST']
