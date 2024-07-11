@@ -149,6 +149,18 @@ run_manager = DistributedRunManager(
 run_manager.save_config()
 run_manager.broadcast()
 
+# Load teacher model if needed
+if args["kd_ratio"] > 0:
+    net.set_active_subnet(
+        ks=max(args["ks_list"]),
+        expand_ratio=max(args["expand_list"]),
+        depth=max(args["depth_list"]),
+    )
+    args["teacher_model"] = net.get_active_subnet()
+    args["teacher_model"].cuda()
+    teacher_path = os.path.join(args["teacher_path"], "checkpoint/model_best.pth.tar")
+    load_models(run_manager, args["teacher_model"], model_path=teacher_path)
+
 prev = {
     "depth": "kernel",
     "expand": "depth",
