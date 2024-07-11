@@ -190,7 +190,7 @@ def set_net_constraint():
     dynamic_net.set_constraint(base_args["task_depth_list"], constraint_type="depth")
     print(
         "Net constraint set :\n ks_list=%s\n expand_ratio_list=%s\n depth_list=%s"
-        % (base_args["ks_list"], base_args["expand_list"], base_args["depth_list"])
+        % (base_args["task_ks_list"], base_args["task_expand_list"], base_args["task_depth_list"])
     )
 
 
