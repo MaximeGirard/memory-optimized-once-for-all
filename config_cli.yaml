@@ -1,11 +1,11 @@
 TEST: false
 
 args:
-  path: "models/supernet/constant"
-  teacher_path: "models/teacher/constant"
-  pretrained_model_path: "models/teacher/constant"
+  path: "models/supernet/constant_imagenet_low_lr"
+  teacher_path: "models/teacher/constant_inet_200_epochs"
+  pretrained_model_path: "models/teacher/constant_inet_200_epochs"
   model: "constant_V3"
-  dataset: "imagenette"
+  dataset: "imagenet"
   res_dir: "res"
   ks_list: [3, 5, 7]
   expand_list: [1, 2, 3, 4]
@@ -48,54 +48,54 @@ args_per_task:
     base_lr: 3.0e-2
     warmup_epochs: 1
     warmup_lr: 3.0e-3
-    ks_list: [3, 5, 7]
-    expand_list: [4]
-    depth_list: [4]
+    task_ks_list: [3, 5, 7]
+    task_expand_list: [4]
+    task_depth_list: [4]
     dynamic_batch_size: 1
   depth_1:
     n_epochs: 4
     base_lr: 2.5e-3
     warmup_epochs: 1
     warmup_lr: 2.5e-3
-    ks_list: [3, 5, 7]
-    expand_list: [4]
-    depth_list: [3, 4]
+    task_ks_list: [3, 5, 7]
+    task_expand_list: [4]
+    task_depth_list: [3, 4]
     dynamic_batch_size: 2
   depth_2:
     n_epochs: 2
     base_lr: 7.5e-3
     warmup_epochs: 1
     warmup_lr: 7.5e-4
-    ks_list: [3, 5, 7]
-    expand_list: [4]
-    depth_list: [2, 3, 4]
+    task_ks_list: [3, 5, 7]
+    task_expand_list: [4]
+    task_depth_list: [2, 3, 4]
     dynamic_batch_size: 2
   expand_1:
     n_epochs: 4
     base_lr: 2.5e-3
     warmup_epochs: 1
     warmup_lr: 2.5e-4
-    ks_list: [3, 5, 7]
-    expand_list: [3, 4]
-    depth_list: [2, 3, 4]
+    task_ks_list: [3, 5, 7]
+    task_expand_list: [3, 4]
+    task_depth_list: [2, 3, 4]
     dynamic_batch_size: 4
   expand_2:
     n_epochs: 2
     base_lr: 7.5e-3
     warmup_epochs: 1
     warmup_lr: 7.5e-4
-    ks_list: [3, 5, 7]
-    expand_list: [2, 3, 4]
-    depth_list: [2, 3, 4]
+    task_ks_list: [3, 5, 7]
+    task_expand_list: [2, 3, 4]
+    task_depth_list: [2, 3, 4]
     dynamic_batch_size: 4
   expand_3:
     n_epochs: 2
     base_lr: 7.5e-3
     warmup_epochs: 1
     warmup_lr: 7.5e-4
-    ks_list: [3, 5, 7]
-    expand_list: [1, 2, 3, 4]
-    depth_list: [2, 3, 4]
+    task_ks_list: [3, 5, 7]
+    task_expand_list: [1, 2, 3, 4]
+    task_depth_list: [2, 3, 4]
     dynamic_batch_size: 4
 
 tasks: ["kernel", "depth", "expand"]
@@ -113,4 +113,4 @@ subnet_config:
 
 wandb:
   use_wandb: true
-  project_name: "once-for-all-memory-constant"  
+  project_name: "once-for-all-memory-constant"
