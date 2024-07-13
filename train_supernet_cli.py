@@ -205,15 +205,15 @@ def get_validation_func_dict():
             {224} if isinstance(base_args["image_size"], int) else sorted({160, 224})
         ),
         "ks_list": (
-            sorted(base_args["ks_list"])
+            sorted(base_args["task_ks_list"])
             if args.step == "kernel"
-            else sorted({min(base_args["ks_list"]), max(base_args["ks_list"])})
+            else sorted({min(base_args["task_ks_list"]), max(base_args["task_ks_list"])})
         ),
         "expand_ratio_list": sorted(
-            {min(base_args["expand_list"]), max(base_args["expand_list"])}
+            {min(base_args["task_expand_list"]), max(base_args["task_expand_list"])}
         ),
         "depth_list": sorted(
-            {min(base_args["depth_list"]), max(base_args["depth_list"])}
+            {min(base_args["task_depth_list"]), max(base_args["task_depth_list"])}
         ),
     }
     print("Validation function parameters:", validate_func_dict)
