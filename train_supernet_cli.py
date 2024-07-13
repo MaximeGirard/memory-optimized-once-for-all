@@ -48,8 +48,8 @@ tasks_phases = config['tasks_phases']
 step_phase = f"{args.step}_{args.phase}"
 if args.step not in tasks:
     raise ValueError(f"Step '{args.step}' not found in config file")
-if args.step + "_phases" in tasks_phases:
-    if args.phase not in tasks_phases[args.step + "_phases"]:
+if args.step in tasks_phases:
+    if args.phase not in tasks_phases[args.step]:
         raise ValueError(
             f"Phase '{args.phase}' not found for step '{args.step}' in config file"
         )
