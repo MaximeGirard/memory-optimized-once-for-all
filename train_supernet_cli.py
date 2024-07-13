@@ -42,6 +42,7 @@ args_per_task = config["args_per_task"]
 tasks = config["tasks"]
 tasks_phases = config["tasks_phases"]
 wandb_config = config["wandb"]
+tasks_phases = config['tasks_phases']
 
 # Verify that the step and phase are in the config file
 step_phase = f"{args.step}_{args.phase}"
@@ -174,7 +175,7 @@ if args.step == "kernel":
     )
 else:
     prev_phase = args.phase - 1
-    prev_step_phase = f"{args.step}_{prev_phase}" if prev_phase > 0 else prev[args.step]
+    prev_step_phase = f"{args.step}_{prev_phase}" if prev_phase > 0 else f"{prev[args.step]}_{tasks_phases[prev[args.step]][-1]}"
     checkpoint_path = os.path.join(
         base_path, "checkpoint", f"checkpoint-{prev_step_phase}.pth.tar"
     )
