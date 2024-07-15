@@ -1,5 +1,5 @@
 args:
-  path: "models/teacher/constant"
+  path: "models/teacher/constant_imagenette_180_epochs"
   teacher_path: null
   model: "constant_V3"
   dataset: "imagenette"
@@ -9,8 +9,8 @@ args:
   image_size: [128, 160, 192, 224]
   base_lr: 3.0e-2
   dynamic_batch_size: 1
-  n_epochs: 3
-  warmup_epochs: 1
+  n_epochs: 180
+  warmup_epochs: 0 
   warmup_lr: 3.0e-3
   manual_seed: 0
   lr_schedule_type: "cosine"
@@ -20,7 +20,7 @@ args:
   momentum: 0.9
   no_nesterov: false
   weight_decay: 3.0e-5
-  label_smoothing: 0
+  label_smoothing: 0.1
   no_decay_keys: "bn#bias"
   fp16_allreduce: false
   model_init: "he_fout"

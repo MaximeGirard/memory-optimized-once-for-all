@@ -291,7 +291,7 @@ def train(
             parameters["warmup_lr"],
         )
 
-        if use_wandb:
+        if use_wandb and run_manager.is_root:
             wandb.log(
                 {
                     "tag": wandb_tag,
@@ -311,7 +311,7 @@ def train(
                 run_manager, epoch=epoch, is_test=False
             )
 
-            if use_wandb:
+            if use_wandb and run_manager.is_root:
                 wandb.log(
                     {
                         "tag": wandb_tag,

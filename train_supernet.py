@@ -199,14 +199,14 @@ def train_task(task, phase=None):
         load_models(run_manager, run_manager.net, pretrained_path)
         set_net_constraint()
     elif task == "depth":
-        args["dynamic_batch_size"] = config['depth_dynamic_batch_size']
+        #args["dynamic_batch_size"] = config['depth_dynamic_batch_size']
         if phase == 1:
             update_dict(args, "depth_1")
         else:
             update_dict(args, "depth_2")
         set_net_constraint()
     elif task == "expand":
-        args["dynamic_batch_size"] = config['expand_dynamic_batch_size']
+        #args["dynamic_batch_size"] = config['expand_dynamic_batch_size']
         if phase == 1:
             update_dict(args, "expand_1")
         elif phase == 2:
