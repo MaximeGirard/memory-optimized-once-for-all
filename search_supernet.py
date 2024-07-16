@@ -1,33 +1,36 @@
 import json
 import os
+import pickle
 import random
 
 import horovod.torch as hvd
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 import yaml
 from tqdm import tqdm
 
-from ofa.classification.elastic_nn.training.progressive_shrinking import \
-    load_models
-from ofa.classification.run_manager.distributed_run_manager import \
-    DistributedRunManager
-from ofa.classification.run_manager.run_config import \
-    DistributedImageNetRunConfig
+from ofa.classification.elastic_nn.training.progressive_shrinking import load_models
+from ofa.classification.run_manager.distributed_run_manager import DistributedRunManager
+from ofa.classification.run_manager.run_config import DistributedImageNetRunConfig
 from ofa.utils import AverageMeter, PeakMemoryEfficiency
+from ofa.nas.accuracy_predictor import MobileNetArchEncoder, AccuracyPredictor
 from ofa.utils.net_viz import draw_arch
+from ofa.nas.search_algorithm import EvolutionFinder
 
 
 # Function to load YAML configuration
 def load_config(config_path):
-    with open(config_path, 'r') as file:
+    with open(config_path, "r") as file:
         return yaml.safe_load(file)
 
+
 # Load configuration
-config = load_config('config_eval.yaml')
+config = load_config("config_eval.yaml")
 
 # Extract args from config
-args = config['args']
+args = config["args"]
+search_config = config["search_config"]
 
 # Initialize Horovod
 hvd.init()
@@ -90,61 +93,54 @@ net = model(
     depth_list=args["depth_list"],
 )
 
-# Initialize DistributedRunManager
-compression = hvd.Compression.fp16 if args["fp16_allreduce"] else hvd.Compression.none
-run_manager = DistributedRunManager(
-    args["path"],
-    net,
-    run_config,
-    compression,
-    backward_steps=args["dynamic_batch_size"],
-    is_root=(hvd.rank() == 0),
+arch_encoder = MobileNetArchEncoder(
+    image_size_list=args["image_size"],
+    depth_list=args["depth_list"],
+    expand_list=args["expand_list"],
+    ks_list=args["ks_list"],
+    n_stage=5,
 )
 
-load_models(run_manager, run_manager.net, args["checkpoint"])
+accuracy_predictor = AccuracyPredictor(
+    arch_encoder,
+    hidden_size=400,
+    n_layers=3,
+    checkpoint_path=search_config["acc_predictor_checkpoint"],
+    device=args["device"],
+)
 
-# Evaluate the model
-accuracies = AverageMeter()
-model = run_manager.net
-data_loader = run_manager.run_config.test_loader
-device = "cuda" if torch.cuda.is_available() else "cpu"
+efficiency_predictor = PeakMemoryEfficiency(ofa_net=net)
 
-# Load subnet config from YAML
-subnet_config = config['subnet_config']
+finder = EvolutionFinder(
+    accuracy_predictor=model,
+    efficiency_predictor=efficiency_predictor,
+    population_size=10,
+    max_time_budget=20,
+)
 
-net.set_active_subnet(ks=subnet_config["ks"], e=subnet_config["e"], d=subnet_config["d"])
-run_config.data_provider.assign_active_img_size(subnet_config["image_size"])
-run_manager.reset_running_statistics(net)
-print(net.get_current_config())
+constraints = np.linspace(search_config["max_constraint"], search_config["min_constraint"], search_config["N_constraint"], endpoint=False)
+for constraint in constraints:
+    best_valids, best_info = finder.run_evolution_search(constraint, verbose=True)
 
-model.eval()
-with torch.no_grad():
-    pbar = tqdm(total=len(data_loader), desc="Validate", position=0, leave=True)
-    for images, labels in data_loader:
-        images, labels = images.to(device), labels.to(device)
-        output = model(images)
-        accuracy = (output.argmax(1) == labels).float().mean()
-        accuracies.update(accuracy.item(), images.size(0))
-        # Update tqdm description with accuracy info
-        pbar.set_postfix({"acc": accuracies.avg, "img_size": images.size(2)})
-        pbar.update(1)
+    found_config = best_info[1]
+    peak_mem = int(best_info[2])
+    pred_acc = best_info[0]
 
-print(f"Final accuracy: {accuracies.avg}")
+    net.set_active_subnet(ks=found_config["ks"], e=found_config["e"], d=found_config["d"])
 
-if subnet_config["draw_graphs"]:
     subnet = net.get_active_subnet()
+    print(subnet)
 
-    name = subnet_config["name"]
+    name = "constraint_" + str(constraint) + "_search_" + str(random.randint(0, 1000))
 
     draw_arch(
         ofa_net=net,
-        resolution=subnet_config["image_size"],
-        out_name=os.path.join(subnet_config["res_dir"], name, "subnet"),
+        resolution=found_config["image_size"],
+        out_name=os.path.join(search_config["res_dir"], name, "subnet"),
     )
-    
-    efficiency_predictor = PeakMemoryEfficiency(ofa_net=net)
+
     peak_act, history = efficiency_predictor.count_peak_activation_size(
-        subnet, (1, 3, subnet_config["image_size"], subnet_config["image_size"]), get_hist=True
+        subnet, (1, 3, found_config["image_size"], found_config["image_size"]), get_hist=True
     )
 
     # Draw histogram
@@ -153,17 +149,18 @@ if subnet_config["draw_graphs"]:
     plt.xlabel("Time")
     plt.ylabel("Memory Occupation")
     plt.title("Memory Occupation over time")
-    plt.savefig(os.path.join(subnet_config["res_dir"], name, "memory_histogram.png"))
+    plt.savefig(os.path.join(search_config["res_dir"], name, "memory_histogram.png"))
     plt.show()
+    print("Best Information:", best_info)
 
     # log informations in a json
     data = {
-        "accuracy": accuracies.avg,
-        "peak_memory": peak_act,
+        "predicted_accuracy": pred_acc,
+        "peak_memory": peak_mem,
         "config": config,
         "memory_history": history,
     }
 
-    info_path = os.path.join(subnet_config["res_dir"], name, "info.json")
+    info_path = os.path.join(search_config["res_dir"], name, "info.json")
     with open(info_path, "w") as f:
         json.dump(data, f)
