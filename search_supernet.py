@@ -26,7 +26,7 @@ def load_config(config_path):
 
 
 # Load configuration
-config = load_config("config_eval.yaml")
+config = load_config("config_search_MIT_OFA.yaml")
 
 # Extract args from config
 args = config["args"]
@@ -49,7 +49,7 @@ run_config = DistributedImageNetRunConfig(
 if args["model"] == "constant_V3":
     from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV3
 
-    assert args["expand_list"] == [1, 2, 3, 4]
+    assert args["expand_list"] == [2, 3, 4]
     assert args["ks_list"] == [3, 5, 7]
     assert args["depth_list"] == [2, 3, 4]
     assert args["width_mult_list"] == 1.0
@@ -106,13 +106,13 @@ accuracy_predictor = AccuracyPredictor(
     hidden_size=400,
     n_layers=3,
     checkpoint_path=search_config["acc_predictor_checkpoint"],
-    device=args["device"],
+    device='cuda',
 )
 
 efficiency_predictor = PeakMemoryEfficiency(ofa_net=net)
 
 finder = EvolutionFinder(
-    accuracy_predictor=model,
+    accuracy_predictor=accuracy_predictor,
     efficiency_predictor=efficiency_predictor,
     population_size=10,
     max_time_budget=20,
