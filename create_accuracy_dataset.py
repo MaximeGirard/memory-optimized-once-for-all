@@ -47,7 +47,7 @@ run_config = DistributedImageNetRunConfig(
 if args["model"] == "constant_V3":
     from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV3
 
-    assert args["expand_list"] == [1, 2, 3, 4]
+    assert args["expand_list"] == [2, 3, 4]
     assert args["ks_list"] == [3, 5, 7]
     assert args["depth_list"] == [2, 3, 4]
     assert args["width_mult_list"] == 1.0
@@ -120,7 +120,7 @@ def create_dataset(run_manager, n_samples=2000, save_interval=100, print_interva
     features = []
 
     # Create a unique output file for each GPU
-    os.path.join(search_config['acc_dataset_path'], f"gpu{hvd.rank()}.pkl")
+    output_file = os.path.join(search_config['acc_dataset_path'], f"gpu{hvd.rank()}.pkl")
 
     # Load existing data if available
     if os.path.exists(output_file):
