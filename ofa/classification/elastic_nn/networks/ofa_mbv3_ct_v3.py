@@ -126,7 +126,7 @@ class OFAMobileNetV3CtV3(MobileNetV3):
             out_channels=first_block_dim,
             kernel_size=3,
             stride=self.stride_stages[0],
-            expand_ratio=self.expand_ratio_list[0],
+            expand_ratio=1,
             act_func=act_stages[0],
             use_se=se_stages[0],
         )
