@@ -41,7 +41,11 @@ def load_data(data_path):
 
 def train_predictor(arch_encoder, config, device='cuda'):
     # Load and prepare data
-    features, accuracies = load_data(config['search_config']['acc_dataset_path'])
+    #features, accuracies = load_data(config['search_config']['acc_dataset_path'])
+    #temp:
+    features, accuracies = load_data('acc_predictor_datasets/MC_OFA/')
+    
+    features, accuracies = features.astype(np.float32), accuracies.astype(np.float32)
     
     # Center the accuracies
     accuracy_mean = np.mean(accuracies)
@@ -52,8 +56,8 @@ def train_predictor(arch_encoder, config, device='cuda'):
     train_dataset = ArchDataset(X_train, y_train)
     val_dataset = ArchDataset(X_val, y_val)
 
-    train_loader = DataLoader(train_dataset, batch_size=config['args']['base_batch_size'], shuffle=True, num_workers=config['args']['n_worker'])
-    val_loader = DataLoader(val_dataset, batch_size=config['args']['base_batch_size'], num_workers=config['args']['n_worker'])
+    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=8)
+    val_loader = DataLoader(val_dataset, batch_size=32, num_workers=8)
 
     # Initialize model
     model = AccuracyPredictor(arch_encoder, device=device).to(device)
@@ -63,7 +67,7 @@ def train_predictor(arch_encoder, config, device='cuda'):
 
     # Loss and optimizer
     criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=config['args']['base_lr'])
+    optimizer = optim.Adam(model.parameters(), lr=3e-2)
 
     # Training loop
     best_val_loss = float('inf')
@@ -113,7 +117,7 @@ def load_config(config_path):
     with open(config_path, 'r') as file:
         return yaml.safe_load(file)
 
-config = load_config('config_search.yaml')
+config = load_config('config_search_MIT_OFA.yaml')
 
 # Initialize arch_encoder
 arch_encoder = MobileNetArchEncoder(

@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 import random
@@ -8,26 +9,30 @@ import torch
 import yaml
 from tqdm import tqdm
 
-from ofa.classification.elastic_nn.training.progressive_shrinking import \
-    load_models
-from ofa.classification.run_manager.distributed_run_manager import \
-    DistributedRunManager
-from ofa.classification.run_manager.run_config import \
-    DistributedImageNetRunConfig
+from ofa.classification.elastic_nn.training.progressive_shrinking import load_models
+from ofa.classification.run_manager.distributed_run_manager import DistributedRunManager
+from ofa.classification.run_manager.run_config import DistributedImageNetRunConfig
 from ofa.utils import AverageMeter, PeakMemoryEfficiency
 from ofa.utils.net_viz import draw_arch
 
 
 # Function to load YAML configuration
 def load_config(config_path):
-    with open(config_path, 'r') as file:
+    with open(config_path, "r") as file:
         return yaml.safe_load(file)
 
+
 # Load configuration
-config = load_config('config_eval.yaml')
+# Argument parsing
+parser = argparse.ArgumentParser(description="Memory-constant OFA")
+parser.add_argument("--config", required=True, help="Path to the configuration file")
+args = parser.parse_args()
+
+# Load configuration
+config = load_config(args.config)
 
 # Extract args from config
-args = config['args']
+args = config["args"]
 
 # Initialize Horovod
 hvd.init()
@@ -110,12 +115,17 @@ data_loader = run_manager.run_config.test_loader
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 # Load subnet config from YAML
-subnet_config = config['subnet_config']
+subnet_config = config["subnet_config"]
 
-net.set_active_subnet(ks=subnet_config["ks"], e=subnet_config["e"], d=subnet_config["d"])
-run_config.data_provider.assign_active_img_size(subnet_config["image_size"])
+if subnet_config["random_sample"]:
+    net.sample_active_subnet()
+    run_config.data_provider.assign_active_img_size(224)
+else:
+    net.set_active_subnet(
+        ks=subnet_config["ks"], e=subnet_config["e"], d=subnet_config["d"]
+    )
+    run_config.data_provider.assign_active_img_size(subnet_config["image_size"])
 run_manager.reset_running_statistics(net)
-print(net.get_current_config())
 
 model.eval()
 with torch.no_grad():
@@ -141,10 +151,12 @@ if subnet_config["draw_graphs"]:
         resolution=subnet_config["image_size"],
         out_name=os.path.join(subnet_config["res_dir"], name, "subnet"),
     )
-    
+
     efficiency_predictor = PeakMemoryEfficiency(ofa_net=net)
     peak_act, history = efficiency_predictor.count_peak_activation_size(
-        subnet, (1, 3, subnet_config["image_size"], subnet_config["image_size"]), get_hist=True
+        subnet,
+        (1, 3, subnet_config["image_size"], subnet_config["image_size"]),
+        get_hist=True,
     )
 
     # Draw histogram
@@ -153,7 +165,9 @@ if subnet_config["draw_graphs"]:
     plt.xlabel("Time")
     plt.ylabel("Memory Occupation")
     plt.title("Memory Occupation over time")
-    plt.savefig(os.path.join(subnet_config["res_dir"], name, "memory_histogram.png"))
+    plt.savefig(
+        os.path.join(subnet_config["res_dir"], name, "memory_histogram.pdf"),
+    )
     plt.show()
 
     # log informations in a json
