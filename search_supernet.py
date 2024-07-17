@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 import pickle
@@ -10,13 +11,16 @@ import torch
 import yaml
 from tqdm import tqdm
 
-from ofa.classification.elastic_nn.training.progressive_shrinking import load_models
-from ofa.classification.run_manager.distributed_run_manager import DistributedRunManager
-from ofa.classification.run_manager.run_config import DistributedImageNetRunConfig
-from ofa.utils import AverageMeter, PeakMemoryEfficiency
-from ofa.nas.accuracy_predictor import MobileNetArchEncoder, AccuracyPredictor
-from ofa.utils.net_viz import draw_arch
+from ofa.classification.elastic_nn.training.progressive_shrinking import \
+    load_models
+from ofa.classification.run_manager.distributed_run_manager import \
+    DistributedRunManager
+from ofa.classification.run_manager.run_config import \
+    DistributedImageNetRunConfig
+from ofa.nas.accuracy_predictor import AccuracyPredictor, MobileNetArchEncoder
 from ofa.nas.search_algorithm import EvolutionFinder
+from ofa.utils import AverageMeter, PeakMemoryEfficiency
+from ofa.utils.net_viz import draw_arch
 
 
 # Function to load YAML configuration
@@ -26,7 +30,14 @@ def load_config(config_path):
 
 
 # Load configuration
-config = load_config("config_search_MIT_OFA.yaml")
+# Argument parsing
+parser = argparse.ArgumentParser(description="Memory-constant OFA")
+parser.add_argument("--config", required=True, help="Path to the configuration file")
+args = parser.parse_args()
+
+# Load configuration
+config = load_config(args.config)
+
 
 # Extract args from config
 args = config["args"]
