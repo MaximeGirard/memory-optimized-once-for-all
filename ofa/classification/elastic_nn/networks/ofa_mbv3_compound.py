@@ -309,7 +309,7 @@ class CompOFAMobileNetV3(MobileNetV3):
             "d": self.runtime_depth,
         }
 
-    def set_active_subnet(self, wid=None, ks=None, e=None, d=None):
+    def set_active_subnet(self, wid=None, ks=None, e=None, d=None, **kwargs):
         if self.fixed_kernel:
             assert (
                 ks is None
