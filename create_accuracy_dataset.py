@@ -24,7 +24,7 @@ def load_config(config_path):
 
 
 # Load configuration
-config = load_config("config_search_CompOFA.yaml")
+config = load_config("config_search.yaml")
 
 # Extract args from config
 args = config["args"]
