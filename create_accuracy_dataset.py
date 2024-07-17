@@ -114,13 +114,13 @@ arch_encoder = MobileNetArchEncoder(
 )
 
 
-def create_dataset(run_manager, n_samples=2000, save_interval=100, subset_size=5000):
+def create_dataset(run_manager, n_samples=2000, save_interval=100, print_interval=10, subset_size=5000):
     configs = []
     accuracies = []
     features = []
 
     # Create a unique output file for each GPU
-    output_file = f"{search_config['acc_dataset_path']}_gpu{hvd.rank()}.pkl"
+    os.path.join(search_config['acc_dataset_path'], f"gpu{hvd.rank()}.pkl")
 
     # Load existing data if available
     if os.path.exists(output_file):
@@ -160,6 +160,14 @@ def create_dataset(run_manager, n_samples=2000, save_interval=100, subset_size=5
         configs.append(config)
         accuracies.append(acc)
         features.append(feature)
+        
+        if (i + 1) % print_interval == 0:
+            print(
+                f"GPU {hvd.rank()}: Processed {i+1}/{n_samples} samples."
+            )
+            print(
+                f"GPU {hvd.rank()}: Config: {config}, Accuracy: {acc:.2f}"
+            )
 
         if (i + 1) % save_interval == 0:
             print(
@@ -202,11 +210,11 @@ def save_results(configs, accuracies, features, output_file):
 
 # Create the dataset
 configs, accuracies, features = create_dataset(
-    run_manager, n_samples=int(2000 / num_gpus), save_interval=100, subset_size=5000
+    run_manager, n_samples=int(2000 / num_gpus), save_interval=100, print_interval=10, subset_size=5000
 )
 
 # Final save
-output_file = f"{search_config['acc_dataset_path']}_gpu{hvd.rank()}.pkl"
+output_file = os.path.join(search_config['acc_dataset_path'], f"gpu{hvd.rank()}.pkl")
 save_results(configs, accuracies, features, output_file)
 
 print(f"GPU {hvd.rank()}: Dataset creation completed and saved to {output_file}")
