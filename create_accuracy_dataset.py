@@ -6,7 +6,6 @@ import random
 import horovod.torch as hvd
 import torch
 import yaml
-from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
 
 from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV3
@@ -14,7 +13,6 @@ from ofa.classification.elastic_nn.training.progressive_shrinking import load_mo
 from ofa.classification.run_manager.distributed_run_manager import DistributedRunManager
 from ofa.classification.run_manager.run_config import DistributedImageNetRunConfig
 from ofa.nas.accuracy_predictor import MobileNetArchEncoder
-from ofa.utils import AverageMeter
 
 
 # Function to load YAML configuration
@@ -114,7 +112,7 @@ arch_encoder = MobileNetArchEncoder(
 )
 
 
-def create_dataset(run_manager, n_samples=2000, save_interval=100, print_interval=10, subset_size=5000):
+def create_dataset(run_manager, n_samples=2000, save_interval=100, print_interval=10):
     configs = []
     accuracies = []
     features = []
@@ -132,19 +130,7 @@ def create_dataset(run_manager, n_samples=2000, save_interval=100, print_interva
         print(f"GPU {hvd.rank()}: Loaded {len(configs)} existing samples.")
 
     # Get the full validation dataset
-    full_val_dataset = run_manager.run_config.data_provider.valid.dataset
-
-    # Create subset of ImageNet validation set
-    subset_indices = random.sample(range(len(full_val_dataset)), k=subset_size)
-    subset = Subset(full_val_dataset, subset_indices)
-
-    subset_loader = DataLoader(
-        subset,
-        batch_size=args["test_batch_size"],
-        shuffle=False,
-        num_workers=args["n_worker"],
-        pin_memory=True,
-    )
+    data_loader = run_manager.run_config.test_loader
 
     start_index = len(configs)
     for i in tqdm(
@@ -153,7 +139,7 @@ def create_dataset(run_manager, n_samples=2000, save_interval=100, print_interva
         config = run_manager.net.sample_active_subnet()
         config["image_size"] = random.choice(args["image_size"])
 
-        acc = test_subnet(run_manager, config, subset_loader)
+        acc = test_subnet(run_manager, config, data_loader)
 
         feature = arch_encoder.arch2feature(config)
 
@@ -210,7 +196,7 @@ def save_results(configs, accuracies, features, output_file):
 
 # Create the dataset
 configs, accuracies, features = create_dataset(
-    run_manager, n_samples=int(2000 / num_gpus), save_interval=100, print_interval=10, subset_size=5000
+    run_manager, n_samples=int(2000 / num_gpus), save_interval=100, print_interval=10
 )
 
 # Final save
