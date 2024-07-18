@@ -20,7 +20,7 @@ from ofa.classification.run_manager.run_config import \
 from ofa.nas.accuracy_predictor import AccuracyPredictor, MobileNetArchEncoder
 from ofa.nas.search_algorithm import EvolutionFinder
 from ofa.utils import AverageMeter, PeakMemoryEfficiency
-from ofa.utils.net_viz import draw_arch
+#from ofa.utils.net_viz import draw_arch
 
 
 # Function to load YAML configuration
@@ -126,7 +126,7 @@ finder = EvolutionFinder(
     accuracy_predictor=accuracy_predictor,
     efficiency_predictor=efficiency_predictor,
     population_size=10,
-    max_time_budget=20,
+    max_time_budget=50,
 )
 
 constraints = np.linspace(search_config["max_constraint"], search_config["min_constraint"], search_config["N_constraint"], endpoint=False)
@@ -143,12 +143,13 @@ for constraint in constraints:
     print(subnet)
 
     name = "constraint_" + str(constraint) + "_search_" + str(random.randint(0, 1000))
+    os.makedirs(os.path.join(search_config["res_dir"], name), exist_ok=True)
 
-    draw_arch(
-        ofa_net=net,
-        resolution=found_config["image_size"],
-        out_name=os.path.join(search_config["res_dir"], name, "subnet"),
-    )
+    # draw_arch(
+    #     ofa_net=net,
+    #     resolution=found_config["image_size"],
+    #     out_name=os.path.join(search_config["res_dir"], name, "subnet"),
+    # )
 
     peak_act, history = efficiency_predictor.count_peak_activation_size(
         subnet, (1, 3, found_config["image_size"], found_config["image_size"]), get_hist=True
@@ -168,7 +169,7 @@ for constraint in constraints:
     data = {
         "predicted_accuracy": pred_acc,
         "peak_memory": peak_mem,
-        "config": config,
+        "config": found_config,
         "memory_history": history,
     }
 
