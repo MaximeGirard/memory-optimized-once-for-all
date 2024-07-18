@@ -1,3 +1,4 @@
+#from ofa.utils.net_viz import draw_arch
 import argparse
 import json
 import os
@@ -11,6 +12,10 @@ import torch
 import yaml
 from tqdm import tqdm
 
+from ofa.classification.elastic_nn.networks import (CompOFAMobileNetV3,
+                                                    OFAMobileNetV3,
+                                                    OFAMobileNetV3CtV2,
+                                                    OFAMobileNetV3CtV3)
 from ofa.classification.elastic_nn.training.progressive_shrinking import \
     load_models
 from ofa.classification.run_manager.distributed_run_manager import \
@@ -20,7 +25,6 @@ from ofa.classification.run_manager.run_config import \
 from ofa.nas.accuracy_predictor import AccuracyPredictor, MobileNetArchEncoder
 from ofa.nas.search_algorithm import EvolutionFinder
 from ofa.utils import AverageMeter, PeakMemoryEfficiency
-#from ofa.utils.net_viz import draw_arch
 
 
 # Function to load YAML configuration
@@ -28,6 +32,16 @@ def load_config(config_path):
     with open(config_path, "r") as file:
         return yaml.safe_load(file)
 
+def evaluate_model(model, data_loader, device):
+    accuracies = AverageMeter()
+    model.eval()
+    with torch.no_grad():
+        for images, labels in tqdm(data_loader, desc="Evaluating"):
+            images, labels = images.to(device), labels.to(device)
+            output = model(images)
+            accuracy = (output.argmax(1) == labels).float().mean()
+            accuracies.update(accuracy.item(), images.size(0))
+    return accuracies.avg
 
 # Load configuration
 # Argument parsing
@@ -104,6 +118,21 @@ net = model(
     depth_list=args["depth_list"],
 )
 
+run_manager = DistributedRunManager(
+    args["path"],
+    net,
+    run_config,
+    None,
+    backward_steps=args["dynamic_batch_size"],
+    is_root=True,
+)
+
+# Load the trained model
+load_models(run_manager, run_manager.net, args["checkpoint"])
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+net = net.to(device)
+
 arch_encoder = MobileNetArchEncoder(
     image_size_list=args["image_size"],
     depth_list=args["depth_list"],
@@ -125,8 +154,8 @@ efficiency_predictor = PeakMemoryEfficiency(ofa_net=net)
 finder = EvolutionFinder(
     accuracy_predictor=accuracy_predictor,
     efficiency_predictor=efficiency_predictor,
-    population_size=10,
-    max_time_budget=50,
+    population_size=20,
+    max_time_budget=20,
 )
 
 constraints = np.linspace(search_config["max_constraint"], search_config["min_constraint"], search_config["N_constraint"], endpoint=False)
@@ -138,7 +167,8 @@ for constraint in constraints:
     pred_acc = best_info[0]
 
     net.set_active_subnet(ks=found_config["ks"], e=found_config["e"], d=found_config["d"])
-
+    run_config.data_provider.assign_active_img_size(found_config["image_size"])
+    
     subnet = net.get_active_subnet()
     print(subnet)
 
@@ -164,10 +194,18 @@ for constraint in constraints:
     plt.savefig(os.path.join(search_config["res_dir"], name, "memory_histogram.png"))
     plt.show()
     print("Best Information:", best_info)
+    
+    # Compute real accuracy
+    # Set active subnet
+    run_manager.reset_running_statistics(net)
+
+    # Evaluate the model
+    real_accuracy = evaluate_model(net, run_manager.run_config.test_loader, device)
 
     # log informations in a json
     data = {
         "predicted_accuracy": pred_acc,
+        "real_accuracy": real_accuracy,
         "peak_memory": peak_mem,
         "config": found_config,
         "memory_history": history,
