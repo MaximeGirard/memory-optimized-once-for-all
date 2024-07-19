@@ -19,10 +19,10 @@ from ofa.utils.layers import (
 from ofa.classification.networks import MobileNetV3
 from ofa.utils import make_divisible, val2list, MyNetwork
 
-__all__ = ["OFAMobileNetV3CtV2"]
+__all__ = ["OFAMobileNetV3CtV1"]
 
 
-class OFAMobileNetV3CtV2(MobileNetV3):
+class OFAMobileNetV3CtV1(MobileNetV3):
     def __init__(
         self,
         n_classes=1000,
@@ -31,7 +31,7 @@ class OFAMobileNetV3CtV2(MobileNetV3):
         base_stage_width=None,
         width_mult=1.0,
         ks_list=3,
-        expand_ratio_list=1,
+        expand_ratio_list=6,
         depth_list=4,
     ):
 
@@ -197,7 +197,7 @@ class OFAMobileNetV3CtV2(MobileNetV3):
 
         classifier = LinearLayer(last_channel, n_classes, dropout_rate=dropout_rate)
 
-        super(OFAMobileNetV3CtV2, self).__init__(
+        super(OFAMobileNetV3CtV1, self).__init__(
             first_conv, blocks, final_expand_layer, feature_mix_layer, classifier
         )
 
@@ -254,7 +254,7 @@ class OFAMobileNetV3CtV2(MobileNetV3):
     @property
     def config(self):
         return {
-            "name": OFAMobileNetV3CtV2.__name__,
+            "name": OFAMobileNetV3CtV1.__name__,
             "bn": self.get_bn_param(),
             "first_conv": self.first_conv.config,
             "blocks": [block.config for block in self.blocks],
@@ -297,7 +297,7 @@ class OFAMobileNetV3CtV2(MobileNetV3):
                 raise ValueError(new_key)
             assert new_key in model_dict, "%s" % new_key
             model_dict[new_key] = state_dict[key]
-        super(OFAMobileNetV3CtV2, self).load_state_dict(model_dict)
+        super(OFAMobileNetV3CtV1, self).load_state_dict(model_dict)
 
     """ set, sample and get active sub-networks """
 

@@ -1,3 +1,4 @@
+import argparse
 import os
 import random
 
@@ -18,24 +19,49 @@ from ofa.utils import MyRandomResizedCrop
 
 # Function to load YAML configuration
 def load_config(config_path):
-    with open(config_path, 'r') as file:
+    with open(config_path, "r") as file:
         return yaml.safe_load(file)
 
+
+# Parse command line arguments
+parser = argparse.ArgumentParser(description="OFA Training Script")
+parser.add_argument(
+    "--step", type=str, choices=["kernel", "depth", "expand"], required=True
+)
+parser.add_argument("--phase", type=int, required=True)
+args = parser.parse_args()
+
 # Load configuration
-config = load_config('config.yaml')
+config = load_config("config_cli.yaml")
 
 # Extract args and args_per_task from config
-args = config['args']
-args_per_task = config['args_per_task']
-tasks = config['tasks']
-tasks_phases = config['tasks_phases']
-TEST = config['TEST']
+TEST = config["TEST"]
+base_args = config["args"]
+args_per_task = config["args_per_task"]
+tasks = config["tasks"]
+tasks_phases = config["tasks_phases"]
 wandb_config = config["wandb"]
+tasks_phases = config['tasks_phases']
 
-# Function to update dictionary
-def update_dict(original_dict, task):
-    original_dict.update(args_per_task[task])
-    return original_dict
+# Verify that the step and phase are in the config file
+step_phase = f"{args.step}_{args.phase}"
+if args.step not in tasks:
+    raise ValueError(f"Step '{args.step}' not found in config file")
+if args.step in tasks_phases:
+    if args.phase not in tasks_phases[args.step]:
+        raise ValueError(
+            f"Phase '{args.phase}' not found for step '{args.step}' in config file"
+        )
+elif args.phase != 1:
+    raise ValueError(f"Invalid phase '{args.phase}' for step '{args.step}'")
+
+# Load specific parameters for this step and phase
+step_args = (
+    args_per_task[step_phase]
+    if step_phase in args_per_task
+    else args_per_task[args.step]
+)
+base_args.update(step_args)
 
 # Initialize Horovod
 hvd.init()
@@ -43,196 +69,176 @@ torch.cuda.set_device(hvd.local_rank())
 
 # Initialize wandb if enabled
 if wandb_config["use_wandb"] and hvd.rank() == 0:
-    wandb.init(project=wandb_config["project_name"], config=args, reinit=True)
+    wandb.init(project=wandb_config["project_name"], config=base_args, reinit=True)
 
 # Create directories
-os.makedirs(args["path"], exist_ok=True)
+os.makedirs(base_args["path"], exist_ok=True)
 
 # Set random seeds
-torch.manual_seed(args["manual_seed"])
-torch.cuda.manual_seed_all(args["manual_seed"])
-np.random.seed(args["manual_seed"])
-random.seed(args["manual_seed"])
+torch.manual_seed(base_args["manual_seed"])
+torch.cuda.manual_seed_all(base_args["manual_seed"])
+np.random.seed(base_args["manual_seed"])
+random.seed(base_args["manual_seed"])
 
 # Set MyRandomResizedCrop options
-MyRandomResizedCrop.CONTINUOUS = args["continuous_size"]
-MyRandomResizedCrop.SYNC_DISTRIBUTED = not args["not_sync_distributed_image_size"]
+MyRandomResizedCrop.CONTINUOUS = base_args["continuous_size"]
+MyRandomResizedCrop.SYNC_DISTRIBUTED = not base_args["not_sync_distributed_image_size"]
 
 print("Rank:", hvd.rank())
 
 # Build run config
 num_gpus = hvd.size()
 print("Number of GPUs:", num_gpus)
-
-# Print all visible GPU devices
-print("Number of visible GPUs:", torch.cuda.device_count())
-# Print their name
-print("This process is running on :", torch.cuda.get_device_name(hvd.local_rank()))
-# the others :
-for i in range(torch.cuda.device_count()):
-    if i != hvd.local_rank():
-        print("Another GPU is available :", torch.cuda.get_device_name(i))
-        
-print("Number of GPUs:", num_gpus)
-args["init_lr"] = args["base_lr"] * num_gpus
-args["train_batch_size"] = args["base_batch_size"]
-args["test_batch_size"] = args["base_batch_size"] * 4
+base_args["init_lr"] = base_args["base_lr"] * num_gpus
+base_args["train_batch_size"] = base_args["base_batch_size"]
+base_args["test_batch_size"] = base_args["base_batch_size"] * 4
 run_config = DistributedImageNetRunConfig(
-    **args, num_replicas=num_gpus, rank=hvd.rank()
+    **base_args, num_replicas=num_gpus, rank=hvd.rank()
 )
 
-if args["model"] == "constant_V3":
+if base_args["model"] == "constant_V3":
     from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV3
 
-    assert args["expand_list"] == [1, 2, 3, 4]
-    assert args["ks_list"] == [3, 5, 7]
-    assert args["depth_list"] == [2, 3, 4]
-    assert args["width_mult_list"] == 1.0
+    assert base_args["expand_list"] == [2, 3, 4]
+    assert base_args["ks_list"] == [3, 5, 7]
+    assert base_args["depth_list"] == [2, 3, 4]
+    assert base_args["width_mult_list"] == 1.0
     model = OFAMobileNetV3CtV3
-elif args["model"] == "constant_V2":
+elif base_args["model"] == "constant_V2":
     from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV2
 
-    assert args["expand_list"] == [0.9, 1, 1.1, 1.2]
-    assert args["ks_list"] == [3, 5, 7]
-    assert args["depth_list"] == [2, 3, 4]
-    assert args["width_mult_list"] == 1.0
+    assert base_args["expand_list"] == [1, 1.5, 2]
+    assert base_args["ks_list"] == [3, 5, 7]
+    assert base_args["depth_list"] == [2, 3, 4]
+    assert base_args["width_mult_list"] == 1.0
     model = OFAMobileNetV3CtV2
-elif args["model"] == "MIT":
+elif base_args["model"] == "constant_V1":
+    from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV1
+
+    assert base_args["expand_list"] == [3, 4, 6]
+    assert base_args["ks_list"] == [3, 5, 7]
+    assert base_args["depth_list"] == [2, 3, 4]
+    assert base_args["width_mult_list"] == 1.0
+    model = OFAMobileNetV3CtV1
+elif base_args["model"] == "MIT":
     from ofa.classification.elastic_nn.networks import OFAMobileNetV3
 
-    assert args["expand_list"] == [1, 2, 3, 4]
-    assert args["ks_list"] == [3, 5, 7]
-    assert args["depth_list"] == [2, 3, 4]
-    assert args["width_mult_list"] == 1.0
+    assert base_args["expand_list"] == [3, 4, 6]
+    assert base_args["ks_list"] == [3, 5, 7]
+    assert base_args["depth_list"] == [2, 3, 4]
+    assert base_args["width_mult_list"] == 1.0
     model = OFAMobileNetV3
 else:
     raise NotImplementedError
 
-# Some more verification
-for task in tasks:
-    assert task in ['kernel', 'depth', 'expand']
-    if task + "_phases" in tasks_phases.keys():
-        assert len(tasks_phases[task + "_phases"]) > 0
-        for phase in tasks_phases[task + "_phases"]:
-            assert set(args_per_task[task + "_" + str(phase)]["ks_list"]).issubset(set(args["ks_list"]))
-            assert set(args_per_task[task + "_" + str(phase)]["expand_list"]).issubset(set(args["expand_list"]))
-            assert set(args_per_task[task + "_" + str(phase)]["depth_list"]).issubset(set(args["depth_list"]))
-
 net = model(
     n_classes=run_config.data_provider.n_classes,
-    bn_param=(args["bn_momentum"], args["bn_eps"]),
-    dropout_rate=args["dropout"],
-    base_stage_width=args["base_stage_width"],
-    width_mult=args["width_mult_list"],
-    ks_list=args["ks_list"],
-    expand_ratio_list=args["expand_list"],
-    depth_list=args["depth_list"],
+    bn_param=(base_args["bn_momentum"], base_args["bn_eps"]),
+    dropout_rate=base_args["dropout"],
+    base_stage_width=base_args["base_stage_width"],
+    width_mult=base_args["width_mult_list"],
+    ks_list=base_args["ks_list"],
+    expand_ratio_list=base_args["expand_list"],
+    depth_list=base_args["depth_list"],
 )
 
 # Initialize DistributedRunManager
-compression = hvd.Compression.fp16 if args["fp16_allreduce"] else hvd.Compression.none
+compression = (
+    hvd.Compression.fp16 if base_args["fp16_allreduce"] else hvd.Compression.none
+)
 run_manager = DistributedRunManager(
-    args["path"],
+    base_args["path"],
     net,
     run_config,
     compression,
-    backward_steps=args["dynamic_batch_size"],
+    backward_steps=base_args["dynamic_batch_size"],
     is_root=(hvd.rank() == 0),
 )
 run_manager.save_config()
 run_manager.broadcast()
 
 # Load teacher model if needed
-if args["kd_ratio"] > 0:
+if base_args["kd_ratio"] > 0:
     net.set_active_subnet(
-        ks=max(args["ks_list"]),
-        expand_ratio=max(args["expand_list"]),
-        depth=max(args["depth_list"]),
+        ks=max(base_args["ks_list"]),
+        expand_ratio=max(base_args["expand_list"]),
+        depth=max(base_args["depth_list"]),
     )
-    args["teacher_model"] = net.get_active_subnet()
-    args["teacher_model"].cuda()
-    teacher_path = os.path.join(args["teacher_path"], "checkpoint/model_best.pth.tar")
-    load_models(run_manager, args["teacher_model"], model_path=teacher_path)
+    base_args["teacher_model"] = net.get_active_subnet()
+    base_args["teacher_model"].cuda()
+    teacher_path = os.path.join(base_args["teacher_path"], "checkpoint/model_best.pth.tar")
+    load_models(run_manager, base_args["teacher_model"], model_path=teacher_path)
+
+prev = {
+    "depth": "kernel",
+    "expand": "depth",
+}
+
+# Load checkpoint
+base_path = base_args["path"]
+if args.step == "kernel":
+    checkpoint_path = os.path.join(
+        base_args["teacher_path"], "checkpoint/model_best.pth.tar"
+    )
+else:
+    prev_phase = args.phase - 1
+    prev_step_phase = f"{args.step}_{prev_phase}" if prev_phase > 0 else f"{prev[args.step]}_{tasks_phases[prev[args.step]][-1]}"
+    checkpoint_path = os.path.join(
+        base_path, "checkpoint", f"checkpoint-{prev_step_phase}.pth.tar"
+    )
+
+load_models(run_manager, run_manager.net, checkpoint_path)
+
+
+# Set network constraint
+def set_net_constraint():
+    dynamic_net = run_manager.net
+    dynamic_net.set_constraint(base_args["task_ks_list"], constraint_type="kernel_size")
+    dynamic_net.set_constraint(base_args["task_expand_list"], constraint_type="expand_ratio")
+    dynamic_net.set_constraint(base_args["task_depth_list"], constraint_type="depth")
+    print(
+        "Net constraint set :\n ks_list=%s\n expand_ratio_list=%s\n depth_list=%s"
+        % (base_args["task_ks_list"], base_args["task_expand_list"], base_args["task_depth_list"])
+    )
+
+
+set_net_constraint()
+
 
 # Function to get validation function dictionary
 def get_validation_func_dict():
     validate_func_dict = {
         "image_size_list": (
-            {224} if isinstance(args["image_size"], int) else sorted({160, 224})
+            {224} if isinstance(base_args["image_size"], int) else sorted({160, 224})
         ),
         "ks_list": (
-            sorted(args["ks_list"])
-            if task == "kernel"
-            else sorted({min(args["ks_list"]), max(args["ks_list"])})
+            sorted(base_args["task_ks_list"])
+            if args.step == "kernel"
+            else sorted({min(base_args["task_ks_list"]), max(base_args["task_ks_list"])})
         ),
         "expand_ratio_list": sorted(
-            {min(args["expand_list"]), max(args["expand_list"])}
+            {min(base_args["task_expand_list"]), max(base_args["task_expand_list"])}
         ),
-        "depth_list": sorted({min(args["depth_list"]), max(args["depth_list"])}),
+        "depth_list": sorted(
+            {min(base_args["task_depth_list"]), max(base_args["task_depth_list"])}
+        ),
     }
     print("Validation function parameters:", validate_func_dict)
     return validate_func_dict
 
-# Function to set network constraint
-def set_net_constraint():
-    dynamic_net = run_manager.net
-    dynamic_net.set_constraint(args["ks_list"], constraint_type="kernel_size")
-    dynamic_net.set_constraint(args["expand_list"], constraint_type="expand_ratio")
-    dynamic_net.set_constraint(args["depth_list"], constraint_type="depth")
-    print(
-        "Net constraint set :\n ks_list=%s\n expand_ratio_list=%s\n depth_list=%s"
-        % (args["ks_list"], args["expand_list"], args["depth_list"])
-    )
 
-# Train function
-def train_task(task, phase=None):
-    print("Task:", task)
-    task_phase = task
-    if phase is not None:
-        print("Phase:", phase)
-        task_phase += "_" + str(phase)
-    args.update(args_per_task[task_phase])
-    validate_func_dict = get_validation_func_dict()
+validate_func_dict = get_validation_func_dict()
 
-    if task == "kernel":
-        pretrained_path = os.path.join(args["pretrained_model_path"], "checkpoint/model_best.pth.tar")
-        load_models(run_manager, run_manager.net, pretrained_path)
-        set_net_constraint()
-    elif task == "depth":
-        #args["dynamic_batch_size"] = config['depth_dynamic_batch_size']
-        if phase == 1:
-            update_dict(args, "depth_1")
-        else:
-            update_dict(args, "depth_2")
-        set_net_constraint()
-    elif task == "expand":
-        #args["dynamic_batch_size"] = config['expand_dynamic_batch_size']
-        if phase == 1:
-            update_dict(args, "expand_1")
-        elif phase == 2:
-            update_dict(args, "expand_2")
-        elif phase == 3:
-            update_dict(args, "expand_3")
-        set_net_constraint()
+# Train
+train(
+    run_manager,
+    base_args,
+    lambda _run_manager, epoch, is_test: validate(
+        _run_manager, epoch, is_test, **validate_func_dict
+    ),
+    use_wandb=wandb_config["use_wandb"],
+    wandb_tag=step_phase,
+)
 
-    train(
-        run_manager,
-        args,
-        lambda _run_manager, epoch, is_test: validate(
-            _run_manager, epoch, is_test, **validate_func_dict
-        ),
-        use_wandb=wandb_config["use_wandb"],
-        wandb_tag=task_phase
-    )
-    
-    run_manager.save_model(model_name=f"checkpoint-{task_phase}.pth.tar")
-
-for task in tasks:
-    if task + "_phases" in tasks_phases.keys():
-        for phase in tasks_phases[task + "_phases"]:
-            train_task(task, phase)
-    else:
-        train_task(task)
-
-# Save the final model
-run_manager.save_model()
+# Save the model
+run_manager.save_model(model_name=f"checkpoint-{step_phase}.pth.tar")
