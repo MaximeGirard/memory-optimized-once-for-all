@@ -1,26 +1,31 @@
-import yaml
+import argparse
+
 import horovod.torch as hvd
-from ofa.classification.run_manager.run_config import (
-    DistributedImageNetRunConfig,
-)
 import torch
-from ofa.classification.run_manager.distributed_run_manager import (
-    DistributedRunManager,
-)
+import yaml
+
 import wandb
+from ofa.classification.run_manager.distributed_run_manager import \
+    DistributedRunManager
+from ofa.classification.run_manager.run_config import \
+    DistributedImageNetRunConfig
 
 
 # Function to load YAML configuration
 def load_config(config_path):
     with open(config_path, "r") as file:
         return yaml.safe_load(file)
-
+    
+    
+parser = argparse.ArgumentParser(description="OFA Training Script")
+parser.add_argument("--config", required=True, help="Path to the configuration file")
+args = parser.parse_args()
 
 # Load configuration
-config = load_config("config_teacher.yaml")
+config = load_config(args.config)
 
 # Extract args from config
-args = config["args"]
+base_args = config["args"]
 wandb_config = config["wandb"]
 
 # Initialize Horovod
@@ -46,36 +51,47 @@ for i in range(torch.cuda.device_count()):
     if i != hvd.local_rank():
         print("Another GPU is available :", torch.cuda.get_device_name(i))
 
-args["init_lr"] = args["base_lr"] * num_gpus
-args["train_batch_size"] = args["base_batch_size"]
-args["test_batch_size"] = args["base_batch_size"] * 4
+# Build run config
+num_gpus = hvd.size()
+print("Number of GPUs:", num_gpus)
+base_args["init_lr"] = base_args["base_lr"] * num_gpus
+base_args["train_batch_size"] = base_args["base_batch_size"]
+base_args["test_batch_size"] = base_args["base_batch_size"] * 4
 run_config = DistributedImageNetRunConfig(
-    **args, num_replicas=num_gpus, rank=hvd.rank()
+    **base_args, num_replicas=num_gpus, rank=hvd.rank()
 )
 
-if args["model"] == "constant_V3":
+if base_args["model"] == "constant_V3":
     from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV3
 
-    assert args["expand_list"] == [1, 2, 3, 4]
-    assert args["ks_list"] == [3, 5, 7]
-    assert args["depth_list"] == [2, 3, 4]
-    assert args["width_mult_list"] == 1.0
+    assert base_args["expand_list"] == [2, 3, 4]
+    assert base_args["ks_list"] == [3, 5, 7]
+    assert base_args["depth_list"] == [2, 3, 4]
+    assert base_args["width_mult_list"] == 1.0
     model = OFAMobileNetV3CtV3
-elif args["model"] == "constant_V2":
+elif base_args["model"] == "constant_V2":
     from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV2
 
-    assert args["expand_list"] == [0.9, 1, 1.1, 1.2]
-    assert args["ks_list"] == [3, 5, 7]
-    assert args["depth_list"] == [2, 3, 4]
-    assert args["width_mult_list"] == 1.0
+    assert base_args["expand_list"] == [1, 1.5, 2]
+    assert base_args["ks_list"] == [3, 5, 7]
+    assert base_args["depth_list"] == [2, 3, 4]
+    assert base_args["width_mult_list"] == 1.0
     model = OFAMobileNetV3CtV2
-elif args["model"] == "MIT":
+elif base_args["model"] == "constant_V1":
+    from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV1
+
+    assert base_args["expand_list"] == [3, 4, 6]
+    assert base_args["ks_list"] == [3, 5, 7]
+    assert base_args["depth_list"] == [2, 3, 4]
+    assert base_args["width_mult_list"] == 1.0
+    model = OFAMobileNetV3CtV1
+elif base_args["model"] == "MIT":
     from ofa.classification.elastic_nn.networks import OFAMobileNetV3
 
-    assert args["expand_list"] == [1, 2, 3, 4]
-    assert args["ks_list"] == [3, 5, 7]
-    assert args["depth_list"] == [2, 3, 4]
-    assert args["width_mult_list"] == 1.0
+    assert base_args["expand_list"] == [3, 4, 6]
+    assert base_args["ks_list"] == [3, 5, 7]
+    assert base_args["depth_list"] == [2, 3, 4]
+    assert base_args["width_mult_list"] == 1.0
     model = OFAMobileNetV3
 else:
     raise NotImplementedError
