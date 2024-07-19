@@ -117,7 +117,7 @@ teacher_net = net.get_active_subnet()
 # Initialize DistributedRunManager
 compression = hvd.Compression.fp16 if base_args["fp16_allreduce"] else hvd.Compression.none
 run_manager = DistributedRunManager(
-    base_args["path"],
+    base_args["t_path"],
     teacher_net,
     run_config,
     compression,
