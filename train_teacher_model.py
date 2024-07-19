@@ -34,7 +34,7 @@ torch.cuda.set_device(hvd.local_rank())
 
 # Initialize wandb if enabled
 if wandb_config["use_wandb"] and hvd.rank() == 0:
-    wandb.init(project=wandb_config["project_name"], config=args, reinit=True)
+    wandb.init(project=wandb_config["project_name"], config=base_args, reinit=True)
 
 print("Rank:", hvd.rank())
 
@@ -98,30 +98,30 @@ else:
 
 net = model(
     n_classes=run_config.data_provider.n_classes,
-    bn_param=(args["bn_momentum"], args["bn_eps"]),
-    dropout_rate=args["dropout"],
-    base_stage_width=args["base_stage_width"],
-    width_mult=args["width_mult_list"],
-    ks_list=args["ks_list"],
-    expand_ratio_list=args["expand_list"],
-    depth_list=args["depth_list"],
+    bn_param=(base_args["bn_momentum"], base_args["bn_eps"]),
+    dropout_rate=base_args["dropout"],
+    base_stage_width=base_args["base_stage_width"],
+    width_mult=base_args["width_mult_list"],
+    ks_list=base_args["ks_list"],
+    expand_ratio_list=base_args["expand_list"],
+    depth_list=base_args["depth_list"],
 )
 
 net.set_active_subnet(
-    ks=max(args["ks_list"]),
-    expand_ratio=max(args["expand_list"]),
-    depth=max(args["depth_list"]),
+    ks=max(base_args["ks_list"]),
+    expand_ratio=max(base_args["expand_list"]),
+    depth=max(base_args["depth_list"]),
 )
 teacher_net = net.get_active_subnet()
 
 # Initialize DistributedRunManager
-compression = hvd.Compression.fp16 if args["fp16_allreduce"] else hvd.Compression.none
+compression = hvd.Compression.fp16 if base_args["fp16_allreduce"] else hvd.Compression.none
 run_manager = DistributedRunManager(
-    args["path"],
+    base_args["path"],
     teacher_net,
     run_config,
     compression,
-    backward_steps=args["dynamic_batch_size"],
+    backward_steps=base_args["dynamic_batch_size"],
     is_root=(hvd.rank() == 0),
 )
 
@@ -129,11 +129,11 @@ run_manager.save_config()
 run_manager.broadcast()
 run_manager.load_model()
 
-args["teacher_model"] = None
+base_args["teacher_model"] = None
 
 run_manager.train(
-    args,
-    warmup_epochs=args["warmup_epochs"],
+    base_args,
+    warmup_epochs=base_args["warmup_epochs"],
     use_wandb=wandb_config["use_wandb"],
     wandb_tag="teacher",
 )
