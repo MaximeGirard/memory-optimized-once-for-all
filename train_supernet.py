@@ -25,6 +25,7 @@ def load_config(config_path):
 
 # Parse command line arguments
 parser = argparse.ArgumentParser(description="OFA Training Script")
+parser.add_argument("--config", required=True, help="Path to the configuration file")
 parser.add_argument(
     "--step", type=str, choices=["kernel", "depth", "expand"], required=True
 )
@@ -32,10 +33,9 @@ parser.add_argument("--phase", type=int, required=True)
 args = parser.parse_args()
 
 # Load configuration
-config = load_config("config_cli.yaml")
+config = load_config(args.config)
 
 # Extract args and args_per_task from config
-TEST = config["TEST"]
 base_args = config["args"]
 args_per_task = config["args_per_task"]
 tasks = config["tasks"]
