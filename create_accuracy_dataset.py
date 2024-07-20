@@ -55,6 +55,7 @@ run_config = DistributedImageNetRunConfig(
 # Model selection based on config
 if args["model"] == "constant_V3":
     from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV3
+
     assert args["expand_list"] == [2, 3, 4]
     assert args["ks_list"] == [3, 5, 7]
     assert args["depth_list"] == [2, 3, 4]
@@ -62,28 +63,30 @@ if args["model"] == "constant_V3":
     model = OFAMobileNetV3CtV3
 elif args["model"] == "constant_V2":
     from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV2
-    assert args["expand_list"] == [0.9, 1, 1.1, 1.2]
+
+    assert args["expand_list"] == [1, 1.5, 2]
     assert args["ks_list"] == [3, 5, 7]
     assert args["depth_list"] == [2, 3, 4]
     assert args["width_mult_list"] == 1.0
     model = OFAMobileNetV3CtV2
+elif args["model"] == "constant_V1":
+    from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV1
+
+    assert args["expand_list"] == [3, 4, 6]
+    assert args["ks_list"] == [3, 5, 7]
+    assert args["depth_list"] == [2, 3, 4]
+    assert args["width_mult_list"] == 1.0
+    model = OFAMobileNetV3CtV1
 elif args["model"] == "MIT":
     from ofa.classification.elastic_nn.networks import OFAMobileNetV3
+
     assert args["expand_list"] == [3, 4, 6]
     assert args["ks_list"] == [3, 5, 7]
     assert args["depth_list"] == [2, 3, 4]
     assert args["width_mult_list"] == 1.0
     model = OFAMobileNetV3
-elif args["model"] == "CompOFA":
-    from ofa.classification.elastic_nn.networks import CompOFAMobileNetV3
-    assert args["expand_list"] == [3, 4, 6]
-    assert args["ks_list"] == [3, 5, 7]
-    assert args["depth_list"] == [2, 3, 4]
-    assert args["width_mult_list"] == 1.0
-    model = CompOFAMobileNetV3
 else:
     raise NotImplementedError
-
 # Initialize the network
 net = model(
     n_classes=run_config.data_provider.n_classes,
