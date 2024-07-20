@@ -1,17 +1,30 @@
+# Memory-constant OFA – A memory-optimized OFA architecture for tight memory constraints
+#
+# Implementation based on:
+# Once for All: Train One Network and Specialize it for Efficient Deployment
+# Han Cai, Chuang Gan, Tianzhe Wang, Zhekai Zhang, Song Han
+# International Conference on Learning Representations (ICLR), 2020.
+
 import argparse
+import gc
 import json
 import os
 import random
 
 import horovod.torch as hvd
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 import yaml
 from tqdm import tqdm
 
-from ofa.classification.elastic_nn.training.progressive_shrinking import load_models
-from ofa.classification.run_manager.distributed_run_manager import DistributedRunManager
-from ofa.classification.run_manager.run_config import DistributedImageNetRunConfig
+from ofa.classification.elastic_nn.training.progressive_shrinking import \
+    load_models
+from ofa.classification.run_manager.distributed_run_manager import \
+    DistributedRunManager
+from ofa.classification.run_manager.run_config import \
+    DistributedImageNetRunConfig
+from ofa.nas.efficiency_predictor import Mbv3FLOPsModel
 from ofa.utils import AverageMeter, PeakMemoryEfficiency
 from ofa.utils.net_viz import draw_arch
 
@@ -20,7 +33,6 @@ from ofa.utils.net_viz import draw_arch
 def load_config(config_path):
     with open(config_path, "r") as file:
         return yaml.safe_load(file)
-
 
 # Load configuration
 # Argument parsing
@@ -50,15 +62,13 @@ run_config = DistributedImageNetRunConfig(
 # Model selection based on config
 if args["model"] == "constant_V3":
     from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV3
-
-    assert args["expand_list"] == [1, 2, 3, 4]
+    assert args["expand_list"] == [2, 3, 4]
     assert args["ks_list"] == [3, 5, 7]
     assert args["depth_list"] == [2, 3, 4]
     assert args["width_mult_list"] == 1.0
     model = OFAMobileNetV3CtV3
 elif args["model"] == "constant_V2":
     from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV2
-
     assert args["expand_list"] == [0.9, 1, 1.1, 1.2]
     assert args["ks_list"] == [3, 5, 7]
     assert args["depth_list"] == [2, 3, 4]
@@ -66,7 +76,6 @@ elif args["model"] == "constant_V2":
     model = OFAMobileNetV3CtV2
 elif args["model"] == "MIT":
     from ofa.classification.elastic_nn.networks import OFAMobileNetV3
-
     assert args["expand_list"] == [3, 4, 6]
     assert args["ks_list"] == [3, 5, 7]
     assert args["depth_list"] == [2, 3, 4]
@@ -74,7 +83,6 @@ elif args["model"] == "MIT":
     model = OFAMobileNetV3
 elif args["model"] == "CompOFA":
     from ofa.classification.elastic_nn.networks import CompOFAMobileNetV3
-
     assert args["expand_list"] == [3, 4, 6]
     assert args["ks_list"] == [3, 5, 7]
     assert args["depth_list"] == [2, 3, 4]
@@ -128,6 +136,7 @@ else:
 run_manager.reset_running_statistics(net)
 
 model.eval()
+
 with torch.no_grad():
     pbar = tqdm(total=len(data_loader), desc="Validate", position=0, leave=True)
     for images, labels in data_loader:
@@ -135,7 +144,7 @@ with torch.no_grad():
         output = model(images)
         accuracy = (output.argmax(1) == labels).float().mean()
         accuracies.update(accuracy.item(), images.size(0))
-        # Update tqdm description with accuracy info
+
         pbar.set_postfix({"acc": accuracies.avg, "img_size": images.size(2)})
         pbar.update(1)
 
@@ -158,24 +167,35 @@ if subnet_config["draw_graphs"]:
         (1, 3, subnet_config["image_size"], subnet_config["image_size"]),
         get_hist=True,
     )
+    print(f"Peak memory: {peak_act}")
 
-    # Draw histogram
+    flops_model = Mbv3FLOPsModel(net)
+    flops = flops_model.get_efficiency(subnet_config)
+    print(f"FLOPs: {flops}")  # M FLOPS
+
     plt.clf()
-    plt.bar(range(len(history)), history)
-    plt.xlabel("Time")
-    plt.ylabel("Memory Occupation")
-    plt.title("Memory Occupation over time")
+    plt.bar(range(1, len(history) + 1), history)
+
+    # Create custom x-ticks
+    x_ticks = [1] + list(range(10, len(history) + 1, 10))
+    x_labels = [str(x) for x in x_ticks]
+
+    plt.xticks(x_ticks, x_labels)
+
+    plt.xlabel("Layer")
+    plt.ylabel("Memory usage (in number of items in RAM)")
+    plt.title("")
     plt.savefig(
         os.path.join(subnet_config["res_dir"], name, "memory_histogram.pdf"),
     )
     plt.show()
-
-    # log informations in a json
+    
     data = {
         "accuracy": accuracies.avg,
         "peak_memory": peak_act,
         "config": config,
         "memory_history": history,
+        "flops": flops,
     }
 
     info_path = os.path.join(subnet_config["res_dir"], name, "info.json")

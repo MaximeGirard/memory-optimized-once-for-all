@@ -1,19 +1,26 @@
+# Memory-constant OFA – A memory-optimized OFA architecture for tight memory constraints
+#
+# Implementation based on:
+# Once for All: Train One Network and Specialize it for Efficient Deployment
+# Han Cai, Chuang Gan, Tianzhe Wang, Zhekai Zhang, Song Han
+# International Conference on Learning Representations (ICLR), 2020.
+
 import os
 import pickle
 
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import yaml
 from sklearn.model_selection import train_test_split
-from torch.utils.data import DataLoader, Dataset
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.utils.data import DataLoader, Dataset
 
 from ofa.nas.accuracy_predictor import AccuracyPredictor, MobileNetArchEncoder
 
-# Assuming you have the AccuracyPredictor and MobileNetArchEncoder classes defined as in your previous code
-
+BASE_PATH = "ablation_study/configs/"
 
 class ArchDataset(Dataset):
     def __init__(self, features, accuracies):
@@ -28,17 +35,11 @@ class ArchDataset(Dataset):
 
 
 def load_data(data_path):
-    all_configs = []
-    all_accuracies = []
-    all_features = []
-
-    for file in os.listdir(data_path):
-        if file.endswith(".pkl"):
-            with open(os.path.join(data_path, file), "rb") as f:
-                data = pickle.load(f)
-                all_configs.extend(data["configs"])
-                all_accuracies.extend(data["accuracies"])
-                all_features.extend(data["features"])
+    with open(os.path.join(data_path), "rb") as f:
+        data = pickle.load(f)
+        all_configs = data["configs"]
+        all_accuracies = data["accuracies"]
+        all_features = data["features"]
 
     return np.array(all_features), np.array(all_accuracies)
 
@@ -124,15 +125,52 @@ def train_predictor(arch_encoder, config, device="cuda"):
 
     # Set base_acc to the mean of the original accuracies
     model.base_acc.data = torch.tensor([accuracy_mean], device=device)
-    
-    # Evaluate on points from the validation set
+
+    # Evaluate on all points from the validation set
     model.eval()
+    all_predictions = []
+    all_real_values = []
+
     with torch.no_grad():
-        features, accuracies = next(iter(val_loader))
-        features = features.to(device)
-        predictions = model(features)
-        print(f"Expected: {accuracies + accuracy_mean}, Predicted: {predictions}")
-    
+        for features, accuracies in val_loader:
+            features = features.to(device)
+            predictions = model(features)
+
+            all_predictions.extend(predictions.cpu().numpy())
+            all_real_values.extend((accuracies + accuracy_mean).numpy())
+
+    # Convert to numpy arrays
+    all_predictions = np.array(all_predictions)
+    all_real_values = np.array(all_real_values)
+
+    # Create a scatter plot
+    plt.figure(figsize=(10, 10))
+    plt.scatter(all_real_values, all_predictions, alpha=0.5)
+    plt.plot(
+        [all_real_values.min(), all_real_values.max()],
+        [all_real_values.min(), all_real_values.max()],
+        "r--",
+        lw=2,
+    )
+    plt.xlabel("Real Values")
+    plt.ylabel("Predicted Values")
+    plt.title("Predicted vs Real Values")
+
+    # Add correlation coefficient
+    correlation = np.corrcoef(all_real_values, all_predictions)[0, 1]
+    plt.text(0.1, 0.9, f"Correlation: {correlation:.2f}", transform=plt.gca().transAxes)
+
+    # Add RMSE
+    rmse = np.sqrt(np.mean((all_real_values - all_predictions) ** 2))
+    plt.text(0.1, 0.85, f"RMSE: {rmse:.4f}", transform=plt.gca().transAxes)
+
+    plt.tight_layout()
+    plt.savefig(BASE_PATH + "predicted_vs_actual.png")
+    plt.close()
+
+    print(f"Correlation: {correlation:.4f}")
+    print(f"RMSE: {rmse:.4f}")
+
     return model
 
 
@@ -141,8 +179,7 @@ def load_config(config_path):
     with open(config_path, "r") as file:
         return yaml.safe_load(file)
 
-
-config = load_config("config_search_CompOFA.yaml")
+config = load_config(BASE_PATH + "config_ablation_3_2_3_4.yaml")
 
 # Initialize arch_encoder
 arch_encoder = MobileNetArchEncoder(
@@ -157,10 +194,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 trained_model = train_predictor(arch_encoder, config, device=device)
 
-torch.save(trained_model.state_dict(), config["search_config"]["acc_predictor_checkpoint"])
+torch.save(
+    trained_model.state_dict(), config["search_config"]["acc_predictor_checkpoint"]
+)
 
 print(f"Final base_acc: {trained_model.base_acc.item()}")
-
-
-
-

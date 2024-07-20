@@ -1,10 +1,24 @@
-import yaml
-import torch
-import horovod.torch as hvd
-from ofa.classification.run_manager.run_config import DistributedImageNetRunConfig
-from ofa.classification.run_manager.distributed_run_manager import DistributedRunManager
-from ofa.classification.elastic_nn.training.progressive_shrinking import load_models
+# Memory-constant OFA – A memory-optimized OFA architecture for tight memory constraints
+#
+# Implementation based on:
+# Once for All: Train One Network and Specialize it for Efficient Deployment
+# Han Cai, Chuang Gan, Tianzhe Wang, Zhekai Zhang, Song Han
+# International Conference on Learning Representations (ICLR), 2020.
+
+import argparse
 import os
+
+import horovod.torch as hvd
+import torch
+import yaml
+
+from ofa.classification.elastic_nn.training.progressive_shrinking import \
+    load_models
+from ofa.classification.run_manager.distributed_run_manager import \
+    DistributedRunManager
+from ofa.classification.run_manager.run_config import \
+    DistributedImageNetRunConfig
+
 
 # Function to load YAML configuration
 def load_config(config_path):
@@ -12,8 +26,14 @@ def load_config(config_path):
         return yaml.safe_load(file)
 
 
+parser = argparse.ArgumentParser(description="OFA Training Script")
+parser.add_argument("--config", required=True, help="Path to the configuration file")
+args = parser.parse_args()
+
 # Load configuration
-config = load_config("config_teacher.yaml")
+config = load_config(args.config)
+
+# Extract args from config
 args = config["args"]
 
 # Initialize Horovod

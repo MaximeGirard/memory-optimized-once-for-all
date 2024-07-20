@@ -36,10 +36,11 @@ class EvolutionFinder:
             efficiency = self.efficiency_predictor.get_efficiency(sample)
             if efficiency <= constraint:
                 return sample, efficiency
+            # This may be decommented to "help" the model to find low constraint configurations
             # else:
-            #     sample["e"] = [random.choice([1, 2]) for _ in range(20)]
+            #     sample["e"] = [random.choice([2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3]) for _ in range(20)]
             #     efficiency = self.efficiency_predictor.get_efficiency(sample)
-            #     #print(efficiency, sample)
+            #     print(efficiency, sample)
             #     if efficiency <= constraint:
             #         return sample, efficiency
 

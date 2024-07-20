@@ -1,3 +1,11 @@
+# Memory-constant OFA – A memory-optimized OFA architecture for tight memory constraints
+#
+# Implementation based on:
+# Once for All: Train One Network and Specialize it for Efficient Deployment
+# Han Cai, Chuang Gan, Tianzhe Wang, Zhekai Zhang, Song Han
+# International Conference on Learning Representations (ICLR), 2020.
+
+# Careful : draw arch doesn't work with compOFA
 #from ofa.utils.net_viz import draw_arch
 import argparse
 import json
@@ -23,6 +31,7 @@ from ofa.classification.run_manager.distributed_run_manager import \
 from ofa.classification.run_manager.run_config import \
     DistributedImageNetRunConfig
 from ofa.nas.accuracy_predictor import AccuracyPredictor, MobileNetArchEncoder
+from ofa.nas.efficiency_predictor import Mbv3FLOPsModel
 from ofa.nas.search_algorithm import EvolutionFinder
 from ofa.utils import AverageMeter, PeakMemoryEfficiency
 
@@ -70,7 +79,6 @@ run_config = DistributedImageNetRunConfig(
     **args, num_replicas=num_gpus, rank=hvd.rank()
 )
 
-# Model selection based on config
 if args["model"] == "constant_V3":
     from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV3
 
@@ -82,11 +90,19 @@ if args["model"] == "constant_V3":
 elif args["model"] == "constant_V2":
     from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV2
 
-    assert args["expand_list"] == [0.9, 1, 1.1, 1.2]
+    assert args["expand_list"] == [1, 1.5, 2]
     assert args["ks_list"] == [3, 5, 7]
     assert args["depth_list"] == [2, 3, 4]
     assert args["width_mult_list"] == 1.0
     model = OFAMobileNetV3CtV2
+elif args["model"] == "constant_V1":
+    from ofa.classification.elastic_nn.networks import OFAMobileNetV3CtV1
+
+    assert args["expand_list"] == [3, 4, 6]
+    assert args["ks_list"] == [3, 5, 7]
+    assert args["depth_list"] == [2, 3, 4]
+    assert args["width_mult_list"] == 1.0
+    model = OFAMobileNetV3CtV1
 elif args["model"] == "MIT":
     from ofa.classification.elastic_nn.networks import OFAMobileNetV3
 
@@ -95,14 +111,6 @@ elif args["model"] == "MIT":
     assert args["depth_list"] == [2, 3, 4]
     assert args["width_mult_list"] == 1.0
     model = OFAMobileNetV3
-elif args["model"] == "CompOFA":
-    from ofa.classification.elastic_nn.networks import CompOFAMobileNetV3
-
-    assert args["expand_list"] == [3, 4, 6]
-    assert args["ks_list"] == [3, 5, 7]
-    assert args["depth_list"] == [2, 3, 4]
-    assert args["width_mult_list"] == 1.0
-    model = CompOFAMobileNetV3
 else:
     raise NotImplementedError
 
@@ -158,7 +166,7 @@ finder = EvolutionFinder(
     max_time_budget=20,
 )
 
-constraints = np.linspace(search_config["max_constraint"], search_config["min_constraint"], search_config["N_constraint"], endpoint=False)
+constraints = np.linspace(search_config["max_constraint"], search_config["min_constraint"], search_config["N_constraint"], endpoint=True)
 for constraint in constraints:
     best_valids, best_info = finder.run_evolution_search(constraint, verbose=True)
 
@@ -184,6 +192,10 @@ for constraint in constraints:
     peak_act, history = efficiency_predictor.count_peak_activation_size(
         subnet, (1, 3, found_config["image_size"], found_config["image_size"]), get_hist=True
     )
+    
+    flops_model = Mbv3FLOPsModel(net)
+    flops = flops_model.get_efficiency(found_config)
+
 
     # Draw histogram
     plt.clf()
@@ -209,6 +221,7 @@ for constraint in constraints:
         "peak_memory": peak_mem,
         "config": found_config,
         "memory_history": history,
+        "flosp": flops
     }
 
     info_path = os.path.join(search_config["res_dir"], name, "info.json")

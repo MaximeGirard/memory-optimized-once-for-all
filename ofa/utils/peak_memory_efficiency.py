@@ -1,3 +1,10 @@
+# Memory-constant OFA – A memory-optimized OFA architecture for tight memory constraints
+#
+# Implementation based on:
+# Once for All: Train One Network and Specialize it for Efficient Deployment
+# Han Cai, Chuang Gan, Tianzhe Wang, Zhekai Zhang, Song Han
+# International Conference on Learning Representations (ICLR), 2020.
+
 import torch
 from ofa.nas.efficiency_predictor import BaseEfficiencyModel
 import torch.nn as nn
@@ -102,9 +109,9 @@ class PeakMemoryEfficiency(BaseEfficiencyModel):
         mem_list = [
             count_conv_mem(net.first_conv),
             count_conv_mem(net.final_expand_layer),
-            #count_conv_mem(net.feature_mix_layer),
             # See below explanation for why we don't keep it
-            #count_conv_mem(net.classifier),
+            # count_conv_mem(net.feature_mix_layer),
+            # count_conv_mem(net.classifier),
         ] + [count_block(blk) for blk in net.blocks]
 
         activation_hist.append(count_conv_mem(net.first_conv))
@@ -113,12 +120,12 @@ class PeakMemoryEfficiency(BaseEfficiencyModel):
                 count for count in count_block(blk, get_list=True) if count != 0
             ]
         activation_hist.append(count_conv_mem(net.final_expand_layer))
-        #activation_hist.append(count_conv_mem(net.feature_mix_layer))
         # I decide to NOT count the final classifier because it is replaced in a
         # real network. Here, it has an output size of 1000, which is too important
         # and would bias the results.
         # But of course the memory overhead (input + output + weights) is still to be counted in real scenario.
         # With output=2 (binary classification,) and input around 496, the memory overhead is about 2k (so we can neglige it).       
+        #activation_hist.append(count_conv_mem(net.feature_mix_layer))
         #activation_hist.append(count_conv_mem(net.classifier))
 
         if get_hist:
