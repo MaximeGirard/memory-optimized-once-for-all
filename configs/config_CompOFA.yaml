@@ -1,0 +1,57 @@
+args:
+  path: "models/CompOFA/"
+  checkpoint: "models/CompOFA/model_best_compofa_simple_elastic.pth.tar"
+  model: "CompOFA"
+  dataset: "imagenet"
+  ks_list: [3, 5, 7]
+  expand_list: [3, 4, 6]
+  depth_list: [2, 3, 4]
+  dynamic_batch_size: 1
+  base_lr: 3.0e-3
+  manual_seed: 0
+  lr_schedule_type: "cosine"
+  base_batch_size: 64
+  valid_size: 100
+  opt_type: "sgd"
+  momentum: 0.9
+  no_nesterov: false
+  weight_decay: 3.0e-5
+  label_smoothing: 0.1
+  no_decay_keys: "bn#bias"
+  fp16_allreduce: false
+  model_init: "he_fout"
+  validation_frequency: 5
+  print_frequency: 10
+  n_worker: 12
+  resize_scale: 0.08
+  distort_color: "tf"
+  image_size: [128, 160, 192, 224]
+  continuous_size: true
+  not_sync_distributed_image_size: false
+  bn_momentum: 0.1
+  bn_eps: 1.0e-5
+  dropout: 0
+  base_stage_width: "proxyless"
+  width_mult_list: 1.0
+  dy_conv_scaling_mode: 1
+  independent_distributed_sampling: false
+  kd_ratio: 1.0
+  kd_type: "ce"
+
+subnet_config:
+  random_sample: true
+  ks: [3, 3, 7, 5, 7, 7, 5, 3, 5, 7, 5, 7, 5, 3, 5, 5, 5, 3, 5, 7]
+  e: [3, 3, 4, 4, 6, 6, 4, 6, 6, 3, 6, 4, 4, 4, 6, 6, 6, 4, 6, 6]
+  d: [4, 4, 4, 4, 4]
+  image_size: 128
+  res_dir: "results/CompOFA/"
+  name: "random_subnet"
+  draw_graphs: true
+
+search_config:
+  N_constraint: 100
+  max_constraint: 800000
+  min_constraint: 300000
+  res_dir: "searches/CompOFA"
+  acc_dataset_path: "acc_predictor_datasets/adapted/CompOFA/dataset.pkl"
+  acc_predictor_checkpoint: "acc_predictor_checkpoints/CompOFA_acc.pth.tar"
