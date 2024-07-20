@@ -34,6 +34,7 @@ from ofa.nas.accuracy_predictor import AccuracyPredictor, MobileNetArchEncoder
 from ofa.nas.efficiency_predictor import Mbv3FLOPsModel
 from ofa.nas.search_algorithm import EvolutionFinder
 from ofa.utils import AverageMeter, PeakMemoryEfficiency
+from ofa.utils.net_viz import draw_arch
 
 
 # Function to load YAML configuration
@@ -183,11 +184,13 @@ for constraint in constraints:
     name = "constraint_" + str(constraint) + "_search_" + str(random.randint(0, 1000))
     os.makedirs(os.path.join(search_config["res_dir"], name), exist_ok=True)
 
-    # draw_arch(
-    #     ofa_net=net,
-    #     resolution=found_config["image_size"],
-    #     out_name=os.path.join(search_config["res_dir"], name, "subnet"),
-    # )
+    # Careful : this does not work for compOFA
+    if args["model"] != "CompOFA":
+        draw_arch(
+            ofa_net=net,
+            resolution=found_config["image_size"],
+            out_name=os.path.join(search_config["res_dir"], name, "subnet"),
+        )
 
     peak_act, history = efficiency_predictor.count_peak_activation_size(
         subnet, (1, 3, found_config["image_size"], found_config["image_size"]), get_hist=True

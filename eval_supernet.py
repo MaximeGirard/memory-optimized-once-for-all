@@ -155,11 +155,13 @@ if subnet_config["draw_graphs"]:
 
     name = subnet_config["name"]
 
-    draw_arch(
-        ofa_net=net,
-        resolution=subnet_config["image_size"],
-        out_name=os.path.join(subnet_config["res_dir"], name, "subnet"),
-    )
+    # Careful : This does not work for CompOFA
+    if args["model"] != "CompOFA":
+        draw_arch(
+            ofa_net=net,
+            resolution=subnet_config["image_size"],
+            out_name=os.path.join(subnet_config["res_dir"], name, "subnet"),
+        )
 
     efficiency_predictor = PeakMemoryEfficiency(ofa_net=net)
     peak_act, history = efficiency_predictor.count_peak_activation_size(
