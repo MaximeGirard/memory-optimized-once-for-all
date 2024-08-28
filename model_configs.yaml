@@ -1,0 +1,39 @@
+MOOFA_V3:
+  model_class: "OFAMobileNetV3CtV3"
+  expand_list: [2, 3, 4]
+  ks_list: [3, 5, 7]
+  depth_list: [2, 3, 4]
+  width_mult_list: 1.0
+  image_size: [128, 160, 192, 224]
+
+MOOFA_V2:
+  model_class: "OFAMobileNetV3CtV2"
+  expand_list: [1, 1.5, 2]
+  ks_list: [3, 5, 7]
+  depth_list: [2, 3, 4]
+  width_mult_list: 1.0
+  image_size: [128, 160, 192, 224]
+
+MOOFA_V1:
+  model_class: "OFAMobileNetV3CtV1"
+  expand_list: [3, 4, 6]
+  ks_list: [3, 5, 7]
+  depth_list: [2, 3, 4]
+  width_mult_list: 1.0
+  image_size: [128, 160, 192, 224]
+
+OFA:
+  model_class: "OFAMobileNetV3"
+  expand_list: [3, 4, 6]
+  ks_list: [3, 5, 7]
+  depth_list: [2, 3, 4]
+  width_mult_list: 1.0
+  image_size: [128, 160, 192, 224]
+
+CompOFA:
+  model_class: "CompOFAMobileNetV3"
+  expand_list: [3, 4, 6]
+  ks_list: [3, 5, 7]
+  depth_list: [2, 3, 4]
+  width_mult_list: 1.0
+  image_size: [128, 160, 192, 224]

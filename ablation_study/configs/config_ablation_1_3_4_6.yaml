@@ -1,121 +1,115 @@
-TEST: false
-
+# TRAINING & GENERAL
 args:
+  # For supernet training only
   path: "ablation_study/models/supernet/config1/"
-  t_path: "ablation_study/models/teacher/config1/"  
+  # For teacher model training and evaluation
   teacher_path: "ablation_study/models/teacher/config1/"
-  pretrained_model_path: "ablation_study/models/teacher/config1"
+  # For OFA supernet evaluation and search
   checkpoint: "ablation_study/models/supernet/config1/checkpoint/checkpoint-expand_2.pth.tar"
-  model: "constant_V1"
+  # Options are: "OFA", "CompOFA", "MOOFA_V1", "MOOFA_V2", "MOOFA_V3"
+  model: "MOOVA_V1"
+  # Options are: "imagenette", "imagenet"
   dataset: "imagenette"
-  res_dir: "res"
-  ks_list: [3, 5, 7]
-  expand_list: [3, 4, 6]
-  depth_list: [2, 3, 4]
-  n_epochs: 180
-  warmup_epochs: 0
-  warmup_lr: 3.0e-3 
-  dynamic_batch_size: 1
-  base_lr: 3.0e-3
-  manual_seed: 0
-  lr_schedule_type: "cosine"
-  base_batch_size: 128
-  valid_size: 100
-  opt_type: "sgd"
-  momentum: 0.9
-  no_nesterov: false
-  weight_decay: 3.0e-5
-  label_smoothing: 0.1
-  no_decay_keys: "bn#bias"
-  fp16_allreduce: false
-  model_init: "he_fout"
-  validation_frequency: 1
-  print_frequency: 10
-  n_worker: 12
-  resize_scale: 0.08
-  distort_color: "tf"
-  image_size: [128, 160, 192, 224]
-  continuous_size: true
-  not_sync_distributed_image_size: false
-  bn_momentum: 0.1
-  bn_eps: 1.0e-5
-  dropout: 0.1
+  # General training parameters
+  base_batch_size: 64
   base_stage_width: "proxyless"
-  width_mult_list: 1.0
+  bn_eps: 1.0e-5
+  bn_momentum: 0.1
+  continuous_size: true
+  distort_color: "tf"
+  dropout: 0.1
   dy_conv_scaling_mode: 1
+  fp16_allreduce: false
   independent_distributed_sampling: false
   kd_ratio: 1.0
   kd_type: "ce"
+  label_smoothing: 0.1
+  lr_schedule_type: "cosine"
+  manual_seed: 0
+  model_init: "he_fout"
+  momentum: 0.9
+  n_worker: 12
+  no_decay_keys: "bn#bias"
+  no_nesterov: false
+  not_sync_distributed_image_size: false
+  opt_type: "sgd"
+  print_frequency: 10
+  resize_scale: 0.08
+  valid_size: 100
+  validation_frequency: 1
+  weight_decay: 3.0e-5
 
+# TRAINING PHASES
+tasks: ["kernel", "depth", "expand"]
+tasks_phases:
+  kernel: 1
+  depth: 2
+  expand: 2
+
+# TASKS, set the number of epochs, learning rate, warmup epochs,
+# warmup learning rate and dynamic batch size for each task
 args_per_task:
+  teacher:
+    n_epochs: 180
+    base_lr: 3.0e-2
+    warmup_epochs: 0 
+    warmup_lr: 3.0e-3
+    dynamic_batch_size: 1
   kernel_1:
     n_epochs: 120
     base_lr: 3.0e-3
     warmup_epochs: 5
     warmup_lr: 3.0e-3
-    task_ks_list: [3, 5, 7]
-    task_expand_list: [6]
-    task_depth_list: [4]
     dynamic_batch_size: 1
   depth_1:
     n_epochs: 25
     base_lr: 2.5e-4
     warmup_epochs: 0
     warmup_lr: 2.5e-3
-    task_ks_list: [3, 5, 7]
-    task_expand_list: [6]
-    task_depth_list: [3, 4]
     dynamic_batch_size: 2
   depth_2:
     n_epochs: 120
     base_lr: 7.5e-4
     warmup_epochs: 5
     warmup_lr: 7.5e-5
-    task_ks_list: [3, 5, 7]
-    task_expand_list: [6]
-    task_depth_list: [2, 3, 4]
     dynamic_batch_size: 2
   expand_1:
     n_epochs: 25
     base_lr: 2.5e-4
     warmup_epochs: 0
     warmup_lr: 2.5e-5
-    task_ks_list: [3, 5, 7]
-    task_expand_list: [4, 6]
-    task_depth_list: [2, 3, 4]
     dynamic_batch_size: 4
   expand_2:
     n_epochs: 120
     base_lr: 2.5e-4
     warmup_epochs: 5
     warmup_lr: 7.5e-5
-    task_ks_list: [3, 5, 7]
-    task_expand_list: [3, 4, 6]
-    task_depth_list: [2, 3, 4]
     dynamic_batch_size: 4
 
-tasks: ["kernel", "depth", "expand"]
-tasks_phases:
-  kernel: [1]
-  depth: [1, 2]
-  expand: [1, 2]
 
-# For eval only :
+# EVAL
 subnet_config:
-  ks: [7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7]
-  e: [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]
-  d: [4, 4, 4, 4]
+  random_sample: false
+  ks: [7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7]
+  e: [6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]
+  d: [4, 4, 4, 4, 4]
   image_size: 224
-  name: "test"
+  res_dir: "ablation_study/results/config1/"
+  name: "reference_subnet"
+  draw_graphs: true
 
+# SEARCH
 search_config:
+  # Search will be performed for N constraints linearly
+  # distributed on the interval [min_constraint, max_constraint]
   N_constraint: 6
   max_constraint: 430000
   min_constraint: 300000
   res_dir: "ablation_study/searches/config1/"
   acc_dataset_path: "ablation_study/acc_predictor_datasets/config1/dataset.pkl"
   acc_predictor_checkpoint: "ablation_study/acc_predictor_checkpoints/config1.pth.tar"
-
+  
+# LOGGING
 wandb:
   use_wandb: true
-  project_name: "once-for-all-memory-constant"
+  project_name: "memory-optimized-once-for-all"  

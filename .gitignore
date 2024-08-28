@@ -103,8 +103,6 @@ venv.bak/
 
 # Data files (customize as needed)
 *.csv
-*.json
-*.pkl
 
 # Datasets
 imagenet/

@@ -1,9 +1,10 @@
-# Memory-constant OFA – A memory-optimized OFA architecture for tight memory constraints
+# MOOFA – a Memory-Optimized OFA architecture for tight memory constraints
 #
 # Implementation based on:
 # Once for All: Train One Network and Specialize it for Efficient Deployment
 # Han Cai, Chuang Gan, Tianzhe Wang, Zhekai Zhang, Song Han
 # International Conference on Learning Representations (ICLR), 2020.
+
 
 import copy
 from hmac import new
