@@ -1,3 +1,10 @@
+# MOOFA – a Memory-Optimized OFA architecture for tight memory constraints
+#
+# Implementation based on:
+# Once for All: Train One Network and Specialize it for Efficient Deployment
+# Han Cai, Chuang Gan, Tianzhe Wang, Zhekai Zhang, Song Han
+# International Conference on Learning Representations (ICLR), 2020.
+
 import os
 import json
 from prettytable import PrettyTable
@@ -23,7 +30,7 @@ def format_value(value, is_float=False):
         return str(value)
 
 base_dir = '../searches' 
-subdirs = ['MIT_OFA', 'CompOFA', 'MC_OFA']
+subdirs = ['MIT_OFA', 'CompOFA', 'MOOFA']
 table = PrettyTable()
 table.field_names = ["Constraint"] + subdirs
 

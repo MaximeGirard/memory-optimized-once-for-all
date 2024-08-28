@@ -1,4 +1,4 @@
-# Memory-constant OFA – A memory-optimized OFA architecture for tight memory constraints
+# MOOFA – a Memory-Optimized OFA architecture for tight memory constraints
 #
 # Implementation based on:
 # Once for All: Train One Network and Specialize it for Efficient Deployment
@@ -33,13 +33,13 @@ def process_folder(folder_path):
 
 
 # Process both folders
-mc_ofa_accuracies, mc_ofa_constraints = process_folder("../searches/MC_OFA")
+mc_ofa_accuracies, mc_ofa_constraints = process_folder("../searches/MOOFA")
 mit_ofa_accuracies, mit_ofa_constraints = process_folder("../searches/MIT_OFA")
 
 # Create the plot
 plt.figure(figsize=(10, 6))
 plt.scatter(
-    mc_ofa_constraints, mc_ofa_accuracies, label="Memory-constant OFA", alpha=0.7
+    mc_ofa_constraints, mc_ofa_accuracies, label="Memory-optimized OFA", alpha=0.7
 )
 plt.scatter(mit_ofa_constraints, mit_ofa_accuracies, label="OFA", alpha=0.7)
 
