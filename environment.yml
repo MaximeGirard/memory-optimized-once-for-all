@@ -1,4 +1,4 @@
-name: ofa_env
+name: moofa_env
 channels:
   - pytorch
   - nvidia
@@ -18,9 +18,9 @@ dependencies:
   - bzip2=1.0.8=hd590300_5
   - c-ares=1.28.1=hd590300_0
   - c-compiler=1.7.0=hd590300_1
-  - ca-certificates=2024.6.2=hbcca054_0
+  - ca-certificates=2024.7.2=h06a4308_0
   - ccache=4.10.1=h065aff2_0
-  - certifi=2024.6.2=pyhd8ed1ab_0
+  - certifi=2024.7.4=py311h06a4308_0
   - cffi=1.16.0=py311hb3a22ac_0
   - charset-normalizer=3.3.2=pyhd8ed1ab_0
   - click=8.1.7=unix_pyh707e725_0
@@ -162,6 +162,7 @@ dependencies:
   - psutil=6.0.0=py311h331c9d8_0
   - pthread-stubs=0.4=h36c2ea0_1001
   - pycparser=2.22=pyhd8ed1ab_0
+  - pydot=1.2.4=py_0
   - pysocks=1.7.1=pyha2e5f31_6
   - python=3.11.9=hb806964_0_cpython
   - python_abi=3.11=4_cp311
@@ -207,10 +208,12 @@ dependencies:
   - zstandard=0.22.0=py311hb6f056b_1
   - zstd=1.5.6=ha6fb4c9_0
   - pip:
+      - beautifulsoup4==4.12.3
       - cloudpickle==3.0.0
       - contourpy==1.2.1
       - cycler==0.12.1
       - fonttools==4.53.1
+      - gdown==5.2.0
       - git+https://github.com/thomas-bouvier/horovod.git@compile-cpp17
       - kiwisolver==1.4.5
       - matplotlib==3.9.1
@@ -218,4 +221,6 @@ dependencies:
       - platformdirs==4.2.2
       - pyparsing==3.1.2
       - python-dateutil==2.9.0.post0
+      - python-graphviz==0.20.3
+      - soupsieve==2.6
       - wandb==0.17.3

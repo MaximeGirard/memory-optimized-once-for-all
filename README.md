@@ -418,11 +418,29 @@ It can be installed using conda :
 conda env create -f environment.yml
 ```
 
+The dataset (ImageNet or Imagenette) must be available in a `imagenet/` or `imagenette2/` directory at the root of the project.
+
+For ImageNet, refer to the [official ImageNet dataset page](https://www.image-net.org/download.php) for download instructions.
+
+For Imagenette, the dataset may be downloaded using the following command :
+
+```bash
+curl -O https://s3.amazonaws.com/fast-ai-imageclas/imagenette2.tgz && tar -xvzf imagenette2.tgz && rm imagenette2.tgz
+```
+
+
+
 ## Pretrained Models
 
-Pretrained models are available for download [here](https://drive.google.com/file/d/1xSFRTZ9b9ONI7_8s_VEyKLzd5rLihYAT)
+Pretrained models are available for download [here](https://drive.google.com/file/d/1xSFRTZ9b9ONI7_8s_VEyKLzd5rLihYAT).
 
 The pretrained models include the teacher model and checkpoints for the MOOFA supernet after each training step.
+
+It could be downloaded using gdown :
+
+```bash
+gdown 1xSFRTZ9b9ONI7_8s_VEyKLzd5rLihYAT && unzip models.zip && rm models.zip
+```
 
 Pretrained models for OFA and CompOFA are also available from the respective original work repositories:
 
