@@ -1,11 +1,11 @@
 # TRAINING & GENERAL
 args:
   # For supernet training only
-  path: "models/dev/MOOFA/"
+  path: "models/MOOFA/"
   # For teacher model training and evaluation
-  teacher_path: "models/dev/MOOFA/teacher/"
+  teacher_path: "models/MOOFA/teacher/"
   # For OFA supernet evaluation and search
-  checkpoint: "models/dev/MOOFA/checkpoint/checkpoint-expand_2.pth.tar"
+  checkpoint: "models/MOOFA/checkpoint/checkpoint-expand_2.pth.tar"
   # Options are: "OFA", "CompOFA", "MOOFA_V1", "MOOFA_V2", "MOOFA_V3"
   model: "MOOFA_V3"
   # Options are: "imagenette", "imagenet"
@@ -50,39 +50,39 @@ tasks_phases:
 # warmup learning rate and dynamic batch size for each task
 args_per_task:
   teacher:
-    n_epochs: 2
+    n_epochs: 180
     base_lr: 3.0e-2
     warmup_epochs: 0 
     warmup_lr: 3.0e-3
     dynamic_batch_size: 1
   kernel_1:
-    n_epochs: 2
+    n_epochs: 120
     base_lr: 3.0e-3
-    warmup_epochs: 1
+    warmup_epochs: 5
     warmup_lr: 3.0e-3
     dynamic_batch_size: 1
   depth_1:
-    n_epochs: 2
+    n_epochs: 25
     base_lr: 2.5e-4
     warmup_epochs: 0
     warmup_lr: 2.5e-3
     dynamic_batch_size: 2
   depth_2:
-    n_epochs: 2
+    n_epochs: 120
     base_lr: 7.5e-4
-    warmup_epochs: 1
+    warmup_epochs: 5
     warmup_lr: 7.5e-5
     dynamic_batch_size: 2
   expand_1:
-    n_epochs: 2
+    n_epochs: 25
     base_lr: 2.5e-4
     warmup_epochs: 0
     warmup_lr: 2.5e-5
     dynamic_batch_size: 4
   expand_2:
-    n_epochs: 2
+    n_epochs: 120
     base_lr: 2.5e-4
-    warmup_epochs: 1
+    warmup_epochs: 5
     warmup_lr: 7.5e-5
     dynamic_batch_size: 4
 
@@ -107,7 +107,7 @@ search_config:
   min_constraint: 850000
   res_dir: "searches/MOOFA/"
   acc_dataset_path: "acc_predictor_datasets/adapted/MOOFA/dataset.pkl"
-  acc_predictor_checkpoint: "acc_predictor_checkpoints/dev/MOOFA_acc.pth.tar"
+  acc_predictor_checkpoint: "acc_predictor_checkpoints/MOOFA_acc.pth.tar"
 
 # LOGGING
 wandb:
