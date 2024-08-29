@@ -211,7 +211,7 @@ dependencies:
       - contourpy==1.2.1
       - cycler==0.12.1
       - fonttools==4.53.1
-      - horovod==0.28.1
+      - git+https://github.com/thomas-bouvier/horovod.git@compile-cpp17
       - kiwisolver==1.4.5
       - matplotlib==3.9.1
       - packaging==24.1

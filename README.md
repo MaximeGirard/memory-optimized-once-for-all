@@ -431,7 +431,7 @@ Pretrained models for OFA and CompOFA are also available from the respective ori
 
 ## Contributing
 
-We welcome contributions to improve the memory-constant OFA supernet. Please feel free to submit issues and pull requests.
+We welcome contributions to improve the MOOFA supernet. Please feel free to submit issues and pull requests.
 
 <!-- ## Citation
 
