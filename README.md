@@ -418,6 +418,17 @@ It can be installed using conda :
 conda env create -f environment.yml
 ```
 
+## Pretrained Models
+
+Pretrained models are available for download [here](https://drive.google.com/file/d/1xSFRTZ9b9ONI7_8s_VEyKLzd5rLihYAT)
+
+The pretrained models include the teacher model and checkpoints for the MOOFA supernet after each training step.
+
+Pretrained models for OFA and CompOFA are also available from the respective original work repositories:
+
+- [OFA](https://github.com/han-cai/files/tree/master/ofa/ofa_checkpoints)
+- [CompOFA](https://github.com/gatech-sysml/CompOFA/tree/main/ofa/checkpoints)
+
 ## Contributing
 
 We welcome contributions to improve the memory-constant OFA supernet. Please feel free to submit issues and pull requests.
