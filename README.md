@@ -250,12 +250,6 @@ python train_moofa_predictor.py --config <config_file> [--output <output_file>] 
   python train_moofa_predictor.py --config configs/config_MOOFA.yaml --output moofa_predictor.png
   ```
 
-## Requirements
-
-- PyTorch 2.3.1
-- Horovod 0.28.1
-
-
 ## Configuration
 
 Modify one of the provided config file in `configs/` to adjust training parameters and other settings.
@@ -414,6 +408,16 @@ wandb login
 
 More information on wandb may be found [here](https://docs.wandb.ai/quickstart)
 
+## Dependencies and Installation
+
+The source code has been developped and tested with Python 3.11.9, CUDA 12.1, PyTorch 2.3.1 and Horovod 0.28.1. The full list of dependencies is available in the `environment.yml` file.
+
+It can be installed using conda :
+
+```bash
+conda env create -f environment.yml
+```
+
 ## Contributing
 
 We welcome contributions to improve the memory-constant OFA supernet. Please feel free to submit issues and pull requests.
@@ -424,7 +428,7 @@ If you use this code in your research, please cite our paper:
 
 ```bibtex
 @article{your-paper,
-  title={Memory-Constant Once-For-All Network for Efficient DNN Deployment},
+  title={Memory-Optimized Once-For-All Network},
   author={Your Name},
   journal={arXiv preprint arXiv:XXXX.XXXXX},
   year={2024}
