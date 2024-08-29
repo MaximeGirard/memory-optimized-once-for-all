@@ -221,6 +221,6 @@ dependencies:
       - platformdirs==4.2.2
       - pyparsing==3.1.2
       - python-dateutil==2.9.0.post0
-      - python-graphviz==0.20.3
+      - graphviz==0.20.3
       - soupsieve==2.6
       - wandb==0.17.3
